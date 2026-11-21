@@ -1,0 +1,26 @@
+[package]
+name = "rvh-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "The `rvh` command line tool"
+
+[[bin]]
+name = "rvh"
+path = "src/main.rs"
+
+[dependencies]
+rvh-asm = { path = "../rvh-asm" }
+rvh-dap = { path = "../rvh-dap" }
+rvh-isa = { path = "../rvh-isa" }
+rvh-json = { path = "../rvh-json" }
+rvh-lsp = { path = "../rvh-lsp" }
+rvh-sem = { path = "../rvh-sem" }
+rvh-session = { path = "../rvh-session" }
+rvh-sim = { path = "../rvh-sim" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

@@ -1,0 +1,128 @@
+SourceFile
+  Line
+    Comment "# Write \"Hi\" and a newline to the console at 0x10000000, then halt."
+    NL "\n"
+  Line
+    Comment "# The console is a byte-wide memory-mapped write (ADR-0006)."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".section"
+      WS " "
+      Op
+        DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "0x10000000"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "72"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sb"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "105"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sb"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "10"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sb"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

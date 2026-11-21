@@ -1,0 +1,115 @@
+# Using it
+
+Three front ends share one core: the `rvh` CLI, the language server and debug
+adapter that editors speak to, and the browser playground.
+
+## CLI
+
+```bash
+rvh isa lookup addi                  # encoding, operands, class
+rvh isa list --ext m                 # every M instruction
+rvh isa decode 0x00150513            # word to mnemonic
+rvh parse prog.s --tree              # the lossless CST
+rvh asm prog.s --symbols             # words, symbols, per-section layout
+rvh asm prog.s --elf out.elf         # ELF32 executable
+rvh run prog.s                       # assemble and run
+rvh run prog.elf                     # detect `\x7fELF` and run it
+rvh hover prog.s 5 6 --locale zh-CN  # what the editor would show
+rvh lsp                              # LSP on stdin/stdout
+rvh dap                              # DAP on stdin/stdout
+```
+
+`--target` selects the ISA (`rv32i`, `rv32i_zicsr`, `rv32im`, `rv32ia`,
+`rv32e`, ...), and a file overrides it with `.attribute arch` or `.option arch`
+([ADR-0014](adr/0014-target-precedence.md)).
+
+## VS Code extension
+
+The extension starts `rvh lsp` and contributes the `rvh` debug type.
+
+| setting | meaning |
+| --- | --- |
+| `rvh.serverPath` | path to the `rvh` binary; defaults to `rvh` on `PATH` |
+| `rvh.target` | workspace default ISA |
+| `rvh.logLevel` | `quiet`, `normal` or `verbose` for the language server log |
+
+![The extension: a missing extension, the quick fix, then the target picker](../assets/vscode-fix.gif)
+
+The status bar shows the target the current file is analysed as. Click it, or run
+**RISC-V: Select target for this file**, to pin a target to one document; a pin
+wins over the workspace setting, and a file that declares its own target wins over
+both.
+
+Debugging: open a `.s` file, set breakpoints in the gutter, press F5 and pick
+**Debug this file**. The debug sidebar carries a **Memory** view that follows `sp`
+or `pc`, marks the rows with `↓` and `▶`, and highlights bytes that changed since
+the last stop. `next` executes one instruction; `ebreak` or `ecall` ends the
+session as a deliberate pause, not an exception.
+
+### Working on the extension
+
+`.vscode/launch.json` carries three configurations:
+
+- **Run Extension (debug server)** builds the server and the extension, opens the
+  Extension Development Host on `tests/corpus`, and points `RVH_LSP_SERVER` at
+  `target/debug/rvh`;
+- **Run Extension (release server)** does the same with the release binary;
+- **Attach to rvh lsp** attaches to the server process; it needs CodeLLDB.
+
+`RVH_LSP_SERVER` wins over `rvh.serverPath`, so debugging never depends on user
+configuration. `preLaunchTask` runs `build: all`.
+
+```bash
+pnpm --dir editors/vscode run check     # tsc --noEmit
+pnpm --dir editors/vscode run package   # writes risc-v-harness-vscode-<version>.vsix
+```
+
+## Playground
+
+```bash
+pnpm install
+pnpm wasm        # build the wasm into web/public/
+pnpm dev         # http://localhost:5173
+```
+
+The header carries a target picker: switching from `rv32i_zicsr` to `rv32im` turns
+a rejected `mul` into an accepted one, because the page starts a new session with
+the same source. The page is a demo, not a second IDE
+([ADR-0016](adr/0016-playground-is-a-demo-surface.md)): no breakpoints, no call
+stack, no course.
+
+![The playground after one step](../assets/playground.png)
+
+The page has an editor, registers, memory, console output and diagnostics with
+one-click fixes. It highlights the line the machine will run next and follows
+step, run and undo. The README animation is recorded from this page by
+`RVH_RECORD=1 pnpm --dir web run test:e2e -- -g "record the README demo"`.
+
+## Corpus
+
+`tests/corpus/` holds one file per idea, numbered as a reading order. Files from
+`900_` up are deliberately broken and exercise diagnostics.
+
+| number | file | teaches |
+| --- | --- | --- |
+| 000 | [000_hello_mmio.s](../tests/corpus/000_hello_mmio.s) | console output through MMIO |
+| 001 | [001_loop_sum.s](../tests/corpus/001_loop_sum.s) | loops and branches |
+| 002 | [002_factorial.s](../tests/corpus/002_factorial.s) | recursion and the stack |
+| 003 | [003_numeric_labels.s](../tests/corpus/003_numeric_labels.s) | local numeric labels |
+| 004 | [004_directives.s](../tests/corpus/004_directives.s) | sections, data, alignment |
+| 005 | [005_trap_csr.s](../tests/corpus/005_trap_csr.s) | CSRs and a trap handler |
+| 006 | [006_arch_directives.s](../tests/corpus/006_arch_directives.s) | `.option arch, +m` |
+| 007 | [007_arch_attribute.s](../tests/corpus/007_arch_attribute.s) | `.attribute arch` |
+| 008 | [008_rv32e.s](../tests/corpus/008_rv32e.s) | the embedded base |
+
+`tests/corpus/README.md` records the numbering rules.
+
+## Content and locales
+
+Short descriptions live in `content/overlay/<locale>/<kind>.toml`; codegen compiles
+them into `rvh-content`. Lookup falls back to English key by key, so a translation
+can land one line at a time.
+
+```bash
+cargo run -p rvh-cli -- hover tests/corpus/001_loop_sum.s 5 6 --locale zh-CN
+```

@@ -1,0 +1,126 @@
+# RV32A: atomics on word memory.
+#
+# All eleven use opcode 0101111 and funct3 010. The top seven bits are
+# funct5 followed by the aq and rl ordering bits; the table holds the form
+# without ordering, which is what an assembler emits for `amoadd.w`.
+
+[[insn]]
+id = "lr-w"
+mnemonic = "lr.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0001000
+class = "atomic"
+operands = ["rd:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "sc-w"
+mnemonic = "sc.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0001100
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amoswap-w"
+mnemonic = "amoswap.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0000100
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amoadd-w"
+mnemonic = "amoadd.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0000000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amoxor-w"
+mnemonic = "amoxor.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0010000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amoand-w"
+mnemonic = "amoand.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0110000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amoor-w"
+mnemonic = "amoor.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b0100000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amomin-w"
+mnemonic = "amomin.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b1000000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amomax-w"
+mnemonic = "amomax.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b1010000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amominu-w"
+mnemonic = "amominu.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b1100000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]
+
+[[insn]]
+id = "amomaxu-w"
+mnemonic = "amomaxu.w"
+ext = "a"
+format = "R"
+opcode = 0b0101111
+funct3 = 0b010
+funct7 = 0b1110000
+class = "atomic"
+operands = ["rd:gpr", "rs2:gpr", "rs1:gpr"]

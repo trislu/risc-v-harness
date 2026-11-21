@@ -1,0 +1,18 @@
+[package]
+name = "rvh-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "C ABI over rvh-session, for the browser and the extension host"
+
+[dependencies]
+rvh-isa = { path = "../rvh-isa" }
+rvh-session = { path = "../rvh-session" }
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true

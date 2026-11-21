@@ -1,0 +1,291 @@
+SourceFile
+  Line
+    Comment "# a0 = 5! by recursion and repeated addition, without the M extension."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "5"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "jal"
+      WS " "
+      Op
+        Ident "ra"
+      Comma ","
+      WS " "
+      Op
+        Ident "factorial"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+  Line
+    NL "\n"
+  Line
+    Label
+      Ident "factorial"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "sp"
+      Comma ","
+      WS " "
+      Op
+        Ident "sp"
+      Comma ","
+      WS " "
+      Op
+        Number "-16"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sw"
+      WS " "
+      Op
+        Ident "ra"
+      Comma ","
+      WS " "
+      Op
+        Number "12"
+        LParen "("
+        Ident "sp"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sw"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "8"
+        LParen "("
+        Ident "sp"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ble"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Ident "base"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "-1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "jal"
+      WS " "
+      Op
+        Ident "ra"
+      Comma ","
+      WS " "
+      Op
+        Ident "factorial"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "lw"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "8"
+        LParen "("
+        Ident "sp"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t2"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+    NL "\n"
+  Line
+    Label
+      Ident "accumulate"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "add"
+      WS " "
+      Op
+        Ident "t2"
+      Comma ","
+      WS " "
+      Op
+        Ident "t2"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "-1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "bnez"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Ident "accumulate"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "mv"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t2"
+    NL "\n"
+  Line
+    Label
+      Ident "base"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "lw"
+      WS " "
+      Op
+        Ident "ra"
+      Comma ","
+      WS " "
+      Op
+        Number "12"
+        LParen "("
+        Ident "sp"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "sp"
+      Comma ","
+      WS " "
+      Op
+        Ident "sp"
+      Comma ","
+      WS " "
+      Op
+        Number "16"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ret"
+    NL "\n"
+---
+diagnostics: none

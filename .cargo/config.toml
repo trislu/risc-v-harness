@@ -1,0 +1,5 @@
+[alias]
+# `cargo xtask <cmd>` -> `cargo run --package xtask -- <cmd>`
+# The docs (docs/adr/0007-repo-shape.md, CI) call `cargo xtask codegen`, so the
+# alias has to exist for that command line to work.
+xtask = "run --package xtask --"

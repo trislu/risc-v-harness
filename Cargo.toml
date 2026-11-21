@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/rvh-content",
+    "crates/rvh-elf",
+    "crates/rvh-json",
+    "crates/rvh-isa",
+    "crates/rvh-syntax",
+    "crates/rvh-sem",
+    "crates/rvh-asm",
+    "crates/rvh-sim",
+    "crates/rvh-session",
+    "crates/rvh-wasm",
+    "crates/rvh-lsp",
+    "crates/rvh-rpc",
+    "crates/rvh-dap",
+    "crates/rvh-cli",
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/trislu/risc-v-harness"
+rust-version = "1.85"
+
+[workspace.lints.rust]
+# `deny`, not `forbid`: the FFI crate genuinely needs raw pointers. Every core
+# crate still opts into `#![forbid(unsafe_code)]` on its own.
+unsafe_code = "deny"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }

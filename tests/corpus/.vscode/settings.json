@@ -1,0 +1,7 @@
+{
+  // The setting lives here so the debug demos are reproducible. Change the
+  // target to "rv64i" to see the server reject an unimplemented base: the
+  // RISC-V harness output channel reports a warning and stays on rv32i_zicsr.
+  "rvh.target": "rv32i_zicsr",
+  "rvh.logLevel": "normal"
+}

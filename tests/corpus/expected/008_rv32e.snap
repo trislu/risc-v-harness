@@ -1,0 +1,86 @@
+SourceFile
+  Line
+    Comment "# The embedded base: same instructions, 16 registers."
+    NL "\n"
+  Line
+    Comment "# `.attribute arch` switches the file to rv32e, so only x0..x15 exist here."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".attribute"
+      WS " "
+      Op
+        Ident "arch"
+      Comma ","
+      WS " "
+      Op
+        String "\"rv32e2p0\""
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "3"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "4"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "add"
+      WS " "
+      Op
+        Ident "a2"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+      WS "          "
+    Comment "# a2 = x12, the highest register pair E allows here"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

@@ -1,0 +1,22 @@
+SourceFile
+  Line
+    Comment "# Deliberately broken: the commas are missing."
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "a0"
+      WS " "
+      Op
+        Ident "a1"
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+---
+diagnostics: 2
+  syntax.expected-comma at 59..61: expected `,` between arguments
+  syntax.expected-comma at 62..63: expected `,` between arguments

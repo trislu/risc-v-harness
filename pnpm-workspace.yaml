@@ -1,0 +1,11 @@
+packages:
+  - web
+  - editors/vscode
+
+# pnpm 12 asks which dependencies may run install scripts. esbuild needs its
+# postinstall (it lays down the platform binary). The other two are packaging
+# tools: `vsce package` works without them, so they stay off.
+allowBuilds:
+  '@vscode/vsce-sign': false
+  esbuild: true
+  keytar: false

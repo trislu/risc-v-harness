@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "rvh",
+      "request": "launch",
+      "name": "Debug this file",
+      "program": "${file}",
+      "stopOnEntry": true
+    },
+    {
+      "type": "rvh",
+      "request": "launch",
+      "name": "Debug 000_hello_mmio.s",
+      "program": "${workspaceFolder}/000_hello_mmio.s",
+      "stopOnEntry": true
+    },
+    {
+      "type": "rvh",
+      "request": "launch",
+      "name": "Debug 002_factorial.s",
+      "program": "${workspaceFolder}/002_factorial.s",
+      "stopOnEntry": true
+    }
+  ]
+}

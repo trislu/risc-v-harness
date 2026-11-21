@@ -1,0 +1,17 @@
+[package]
+name = "rvh-asm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Lay out and encode a resolved program into an Image"
+
+[dependencies]
+rvh-elf = { path = "../rvh-elf" }
+rvh-isa = { path = "../rvh-isa" }
+rvh-sem = { path = "../rvh-sem" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

@@ -1,0 +1,62 @@
+# Zicsr: control and status register instructions.
+# Same schema as rv32i.toml; see the header comment there.
+
+[[insn]]
+id = "csrrw"
+mnemonic = "csrrw"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b001
+class = "csr"
+operands = ["rd:gpr", "csr:12", "rs1:gpr"]
+
+[[insn]]
+id = "csrrs"
+mnemonic = "csrrs"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b010
+class = "csr"
+operands = ["rd:gpr", "csr:12", "rs1:gpr"]
+
+[[insn]]
+id = "csrrc"
+mnemonic = "csrrc"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b011
+class = "csr"
+operands = ["rd:gpr", "csr:12", "rs1:gpr"]
+
+[[insn]]
+id = "csrrwi"
+mnemonic = "csrrwi"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b101
+class = "csr"
+operands = ["rd:gpr", "csr:12", "zimm:5"]
+
+[[insn]]
+id = "csrrsi"
+mnemonic = "csrrsi"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b110
+class = "csr"
+operands = ["rd:gpr", "csr:12", "zimm:5"]
+
+[[insn]]
+id = "csrrci"
+mnemonic = "csrrci"
+ext = "zicsr"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b111
+class = "csr"
+operands = ["rd:gpr", "csr:12", "zimm:5"]

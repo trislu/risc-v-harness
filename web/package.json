@@ -1,0 +1,26 @@
+{
+  "name": "@rvh/web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "smoke": "tsc -p tsconfig.smoke.json && node ../xtask/engine-smoke.mjs",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.58.0",
+    "svelte-check": "^4.7.8",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.8"
+  },
+  "dependencies": {
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "codemirror": "^6.0.2"
+  }
+}

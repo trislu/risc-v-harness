@@ -1,0 +1,5 @@
+node_modules
+dist
+public/rvh_wasm.wasm
+test-results
+playwright-report

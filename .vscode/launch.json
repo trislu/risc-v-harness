@@ -1,0 +1,49 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension (debug server)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
+        "${workspaceFolder}/tests/corpus"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/editors/vscode/out/**/*.js"
+      ],
+      "env": {
+        "RVH_LSP_SERVER": "${workspaceFolder}/target/debug/rvh",
+        "RUST_BACKTRACE": "1"
+      },
+      "autoAttachChildProcesses": true,
+      "preLaunchTask": "build: all"
+    },
+    {
+      "name": "Run Extension (release server)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/editors/vscode",
+        "${workspaceFolder}/tests/corpus"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/editors/vscode/out/**/*.js"
+      ],
+      "env": {
+        "RVH_LSP_SERVER": "${workspaceFolder}/target/release/rvh"
+      },
+      "autoAttachChildProcesses": true,
+      "preLaunchTask": "build: all"
+    },
+    {
+      "name": "Attach to rvh lsp",
+      "type": "lldb",
+      "request": "attach",
+      "program": "${workspaceFolder}/target/debug/rvh",
+      "sourceLanguages": [
+        "rust"
+      ]
+    }
+  ]
+}

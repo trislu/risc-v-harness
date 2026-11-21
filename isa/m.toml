@@ -1,0 +1,92 @@
+# RV32M: integer multiply and divide.
+#
+# Schema: see isa/rv32i.toml. All eight are R-format with opcode 0110011 and
+# funct7 0000001; funct3 selects the operation.
+
+[[insn]]
+id = "mul"
+mnemonic = "mul"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b000
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "mulh"
+mnemonic = "mulh"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b001
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "mulhsu"
+mnemonic = "mulhsu"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b010
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "mulhu"
+mnemonic = "mulhu"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b011
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "div"
+mnemonic = "div"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b100
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "divu"
+mnemonic = "divu"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b101
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "rem"
+mnemonic = "rem"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b110
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "remu"
+mnemonic = "remu"
+ext = "m"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b111
+funct7 = 0b0000001
+class = "mul-div"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]

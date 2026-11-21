@@ -1,0 +1,15 @@
+/target
+/dist
+web/public/rvh_wasm.wasm
+node_modules/
+*.swp
+.DS_Store
+editors/vscode/out/
+editors/vscode/*.vsix
+editors/vscode/node_modules/
+
+# Scratch files for experiments; never fixtures.
+/scratch/
+
+# Recorded frame inputs for assets/*.gif; only the GIFs are committed.
+assets/frames/

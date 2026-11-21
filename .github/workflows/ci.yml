@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+      - run: ./xtask/lsp-smoke.sh
+      - run: ./xtask/verify-elf.sh
+
+  codegen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo run -p xtask -- codegen --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes markdownlint-cli2@0.24.2 '**/*.md'
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: cargo build -p rvh-wasm --target wasm32-unknown-unknown --release
+      - run: node xtask/wasm-smoke.mjs target/wasm32-unknown-unknown/release/rvh_wasm.wasm
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir web run check
+      - run: pnpm --dir editors/vscode run check
+      - run: pnpm --dir editors/vscode run build
+      - run: pnpm --dir web exec playwright install --with-deps chromium
+      - run: pnpm --dir web run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playground-screenshot
+          path: docs/images/playground.png
+
+  differential:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-linux-gnu
+      - run: ./xtask/verify-asm.sh

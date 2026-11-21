@@ -1,0 +1,20 @@
+[package]
+name = "rvh-sim"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "RV32I execution: machine state, step, undo, trace"
+
+[dependencies]
+rvh-asm = { path = "../rvh-asm" }
+rvh-elf = { path = "../rvh-elf" }
+rvh-isa = { path = "../rvh-isa" }
+
+[dev-dependencies]
+rvh-sem = { path = "../rvh-sem" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

@@ -1,0 +1,431 @@
+# RV32I base integer instruction set.
+#
+# Schema (ADR-0003, architecture.md §2.1):
+#   id        stable key; content keys are derived as insn.<id>.<field>
+#   mnemonic  as written in source
+#   ext       extension id (lowercase)
+#   format    R | I | S | B | U | J
+#   opcode    7-bit binary literal
+#   funct3    3-bit binary literal, when the format has one
+#   funct7    7-bit binary literal, when the instruction needs one
+#   imm12     fixed 12-bit immediate field (system instructions only)
+#   class     semantic class; drives explanation templates
+#   operands  kind:bits[:signed][:align], with kinds
+#             rd gpr, rs1 gpr, rs2 gpr, imm, shamt, csr, zimm, pred, succ
+#
+# Fields are binary literals so the bit pattern stays visible in review.
+# Any other key is rejected by `cargo xtask codegen`.
+
+[[insn]]
+id = "add"
+mnemonic = "add"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b000
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "sub"
+mnemonic = "sub"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b000
+funct7 = 0b0100000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "sll"
+mnemonic = "sll"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b001
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "slt"
+mnemonic = "slt"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b010
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "sltu"
+mnemonic = "sltu"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b011
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "xor"
+mnemonic = "xor"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b100
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "srl"
+mnemonic = "srl"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b101
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "sra"
+mnemonic = "sra"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b101
+funct7 = 0b0100000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "or"
+mnemonic = "or"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b110
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "and"
+mnemonic = "and"
+ext = "i"
+format = "R"
+opcode = 0b0110011
+funct3 = 0b111
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["rd:gpr", "rs1:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "addi"
+mnemonic = "addi"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b000
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "slti"
+mnemonic = "slti"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b010
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "sltiu"
+mnemonic = "sltiu"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b011
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "xori"
+mnemonic = "xori"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b100
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "ori"
+mnemonic = "ori"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b110
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "andi"
+mnemonic = "andi"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b111
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "slli"
+mnemonic = "slli"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b001
+funct7 = 0b0000000
+class = "shift-imm"
+operands = ["rd:gpr", "rs1:gpr", "shamt:5"]
+
+[[insn]]
+id = "srli"
+mnemonic = "srli"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b101
+funct7 = 0b0000000
+class = "shift-imm"
+operands = ["rd:gpr", "rs1:gpr", "shamt:5"]
+
+[[insn]]
+id = "srai"
+mnemonic = "srai"
+ext = "i"
+format = "I"
+opcode = 0b0010011
+funct3 = 0b101
+funct7 = 0b0100000
+class = "shift-imm"
+operands = ["rd:gpr", "rs1:gpr", "shamt:5"]
+
+[[insn]]
+id = "lb"
+mnemonic = "lb"
+ext = "i"
+format = "I"
+opcode = 0b0000011
+funct3 = 0b000
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "lh"
+mnemonic = "lh"
+ext = "i"
+format = "I"
+opcode = 0b0000011
+funct3 = 0b001
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "lw"
+mnemonic = "lw"
+ext = "i"
+format = "I"
+opcode = 0b0000011
+funct3 = 0b010
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "lbu"
+mnemonic = "lbu"
+ext = "i"
+format = "I"
+opcode = 0b0000011
+funct3 = 0b100
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "lhu"
+mnemonic = "lhu"
+ext = "i"
+format = "I"
+opcode = 0b0000011
+funct3 = 0b101
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "sb"
+mnemonic = "sb"
+ext = "i"
+format = "S"
+opcode = 0b0100011
+funct3 = 0b000
+class = "store"
+operands = ["rs2:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "sh"
+mnemonic = "sh"
+ext = "i"
+format = "S"
+opcode = 0b0100011
+funct3 = 0b001
+class = "store"
+operands = ["rs2:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "sw"
+mnemonic = "sw"
+ext = "i"
+format = "S"
+opcode = 0b0100011
+funct3 = 0b010
+class = "store"
+operands = ["rs2:gpr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "beq"
+mnemonic = "beq"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b000
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "bne"
+mnemonic = "bne"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b001
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "blt"
+mnemonic = "blt"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b100
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "bge"
+mnemonic = "bge"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b101
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "bltu"
+mnemonic = "bltu"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b110
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "bgeu"
+mnemonic = "bgeu"
+ext = "i"
+format = "B"
+opcode = 0b1100011
+funct3 = 0b111
+class = "branch"
+operands = ["rs1:gpr", "rs2:gpr", "imm:12:s:2"]
+
+[[insn]]
+id = "lui"
+mnemonic = "lui"
+ext = "i"
+format = "U"
+opcode = 0b0110111
+class = "upper"
+operands = ["rd:gpr", "imm:20:u"]
+
+[[insn]]
+id = "auipc"
+mnemonic = "auipc"
+ext = "i"
+format = "U"
+opcode = 0b0010111
+class = "upper"
+operands = ["rd:gpr", "imm:20:u"]
+
+[[insn]]
+id = "jal"
+mnemonic = "jal"
+ext = "i"
+format = "J"
+opcode = 0b1101111
+class = "jump"
+operands = ["rd:gpr", "imm:20:s:2"]
+
+[[insn]]
+id = "jalr"
+mnemonic = "jalr"
+ext = "i"
+format = "I"
+opcode = 0b1100111
+funct3 = 0b000
+class = "jump-reg"
+operands = ["rd:gpr", "rs1:gpr", "imm:12:s"]
+
+# fm | pred | succ share the 12-bit immediate field. The encoder assembles that
+# field in M2; the metadata only records which operands exist.
+[[insn]]
+id = "fence"
+mnemonic = "fence"
+ext = "i"
+format = "I"
+opcode = 0b0001111
+funct3 = 0b000
+class = "system"
+operands = ["pred:4", "succ:4"]
+
+[[insn]]
+id = "ecall"
+mnemonic = "ecall"
+ext = "i"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b000
+imm12 = 0b000000000000
+class = "system"
+operands = []
+
+[[insn]]
+id = "ebreak"
+mnemonic = "ebreak"
+ext = "i"
+format = "I"
+opcode = 0b1110011
+funct3 = 0b000
+imm12 = 0b000000000001
+class = "system"
+operands = []

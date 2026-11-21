@@ -1,0 +1,31 @@
+SourceFile
+  Line
+    Comment "# Deliberately broken: the line starts with a token that cannot open a statement."
+    NL "\n"
+  Line
+    WS "    "
+    Error
+      Error "@"
+      WS " "
+      Ident "invalid"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+---
+diagnostics: 2
+  syntax.unexpected-character at 86..87: unexpected character; assembly is ASCII outside comments and strings
+  syntax.unexpected-token at 86..87: unexpected token; expected a label, an instruction or a directive

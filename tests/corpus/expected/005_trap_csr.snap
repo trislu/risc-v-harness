@@ -1,0 +1,89 @@
+SourceFile
+  Line
+    Comment "# Install a trap handler and read a CSR."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "la"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Ident "handler"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrw"
+      WS " "
+      Op
+        Ident "mtvec"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrr"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Ident "mstatus"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+  Line
+    NL "\n"
+  Line
+    Label
+      Ident "handler"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrr"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Ident "mcause"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

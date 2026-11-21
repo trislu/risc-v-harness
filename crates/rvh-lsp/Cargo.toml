@@ -1,0 +1,18 @@
+[package]
+name = "rvh-lsp"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "LSP feature layer over rvh-session"
+
+[dependencies]
+rvh-isa = { path = "../rvh-isa" }
+rvh-json = { path = "../rvh-json", features = ["parse"] }
+rvh-rpc = { path = "../rvh-rpc" }
+rvh-session = { path = "../rvh-session" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

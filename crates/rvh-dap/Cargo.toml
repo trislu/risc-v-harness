@@ -1,0 +1,19 @@
+[package]
+name = "rvh-dap"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "A minimal Debug Adapter Protocol server over rvh-session"
+
+[dependencies]
+rvh-isa = { path = "../rvh-isa" }
+rvh-json = { path = "../rvh-json", features = ["parse"] }
+rvh-sem = { path = "../rvh-sem" }
+rvh-rpc = { path = "../rvh-rpc" }
+rvh-session = { path = "../rvh-session" }
+rvh-sim = { path = "../rvh-sim" }
+
+[lints]
+workspace = true

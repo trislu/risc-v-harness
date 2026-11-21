@@ -1,0 +1,164 @@
+{
+  "name": "risc-v-harness-vscode",
+  "displayName": "RISC-V Harness",
+  "description": "RISC-V assembly: diagnostics, quick fixes and hover, powered by rvh",
+  "version": "0.1.0",
+  "publisher": "risc-v-harness",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters"
+  ],
+  "activationEvents": [
+    "onLanguage:riscv-assembly"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "riscv-assembly",
+        "aliases": [
+          "RISC-V Assembly",
+          "riscv"
+        ],
+        "extensions": [
+          ".s",
+          ".S"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "configuration": {
+      "title": "RISC-V harness",
+      "properties": {
+        "rvh.serverPath": {
+          "type": "string",
+          "default": "rvh",
+          "description": "Path to the rvh binary. The extension starts it as `rvh lsp`."
+        },
+        "rvh.target": {
+          "type": "string",
+          "default": "rv32i_zicsr",
+          "description": "Target ISA. `rv32i` and `rv32i_zicsr` work today; `rv32e` and `rv64*` are named but not implemented, and the server reports a warning and stays on rv32i_zicsr."
+        },
+        "rvh.logLevel": {
+          "type": "string",
+          "enum": [
+            "quiet",
+            "normal",
+            "verbose"
+          ],
+          "default": "normal",
+          "markdownDescription": "How much `rvh` writes to the **RISC-V harness** output channel. `verbose` also records per-edit traffic; the editor setting `languageclient.trace.server` adds protocol tracing on top."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[riscv-assembly]": {
+        "editor.semanticHighlighting.enabled": true,
+        "editor.quickSuggestions": {
+          "other": true,
+          "comments": false,
+          "strings": false
+        }
+      }
+    },
+    "debuggers": [
+      {
+        "type": "rvh",
+        "label": "RISC-V (rvh)",
+        "languages": [
+          "riscv-assembly"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "Path to a .s source file or a linked ELF.",
+                "required": true
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "default": true,
+                "description": "Stop at the first instruction instead of running."
+              }
+            },
+            "required": [
+              "program"
+            ]
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "rvh",
+            "request": "launch",
+            "name": "Debug RISC-V program",
+            "program": "${file}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "RISC-V (rvh): launch",
+            "description": "Run a RISC-V program under rvh",
+            "body": {
+              "type": "rvh",
+              "request": "launch",
+              "name": "Debug RISC-V program",
+              "program": "${file}",
+              "stopOnEntry": true
+            }
+          }
+        ]
+      }
+    ],
+    "breakpoints": [
+      {
+        "language": "riscv-assembly"
+      }
+    ],
+    "views": {
+      "debug": [
+        {
+          "type": "webview",
+          "id": "rvh.memory",
+          "name": "Memory"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "rvh.selectTarget",
+        "title": "RISC-V: Select target for this file"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "tsc -p . --noEmit && esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap",
+    "check": "tsc -p . --noEmit",
+    "watch": "esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap --watch",
+    "package": "npm run build && vsce package --no-dependencies"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.0",
+    "typescript": "~6.0.3",
+    "esbuild": "^0.25.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trislu/risc-v-harness.git"
+  },
+  "homepage": "https://github.com/trislu/risc-v-harness#readme",
+  "bugs": {
+    "url": "https://github.com/trislu/risc-v-harness/issues"
+  }
+}

@@ -1,0 +1,21 @@
+[package]
+name = "rvh-session"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Stateful facade over parse, assemble and run, with JSON snapshots"
+
+[dependencies]
+rvh-asm = { path = "../rvh-asm" }
+rvh-content = { path = "../rvh-content" }
+rvh-elf = { path = "../rvh-elf" }
+rvh-isa = { path = "../rvh-isa" }
+rvh-json = { path = "../rvh-json" }
+rvh-sem = { path = "../rvh-sem" }
+rvh-sim = { path = "../rvh-sim" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

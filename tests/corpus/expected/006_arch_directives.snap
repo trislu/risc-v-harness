@@ -1,0 +1,96 @@
+SourceFile
+  Line
+    Comment "# Change the target mid-file with `.option arch`, the way GNU as allows."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "6"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "7"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".option"
+      WS " "
+      Op
+        Ident "arch"
+      Comma ","
+      WS " "
+      Op
+        Plus "+"
+        Ident "m"
+      WS "        "
+    Comment "# M is available from here on"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "mul"
+      WS " "
+      Op
+        Ident "a2"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrr"
+      WS " "
+      Op
+        Ident "a3"
+      Comma ","
+      WS " "
+      Op
+        Ident "mstatus"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

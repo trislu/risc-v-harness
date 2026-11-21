@@ -1,0 +1,118 @@
+SourceFile
+  Line
+    Comment "# Sum 1..10 into a0, then stop."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "11"
+    NL "\n"
+  Line
+    Label
+      Ident "loop"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "add"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "blt"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Ident "loop"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

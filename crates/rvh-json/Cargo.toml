@@ -1,0 +1,16 @@
+[package]
+name = "rvh-json"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Minimal JSON reader and writer, shared by the CLI, the session and the LSP"
+
+[lints]
+workspace = true
+
+[features]
+default = []
+# The parser is only needed by the LSP; the wasm build keeps it out.
+parse = []

@@ -1,0 +1,13 @@
+# 草稿。未翻译的键会回退到 en。
+# draft; untranslated keys fall back to English.
+
+li = "加载立即数：放得下时用 `addi`，否则 `lui` + `addi`"
+la = "加载地址：`auipc` 加 `addi` 两条"
+mv = "传送：`addi rd, rs, 0`"
+j = "跳转：`jal x0, target`"
+ret = "返回：`jalr x0, 0(ra)`"
+nop = "空操作：`addi x0, x0, 0`"
+beqz = "等于零则跳转：`beq rs, x0, target`"
+bnez = "不等于零则跳转：`bne rs, x0, target`"
+csrr = "读 CSR：`csrrs rd, csr, x0`"
+csrw = "写 CSR：`csrrw x0, csr, rs`"

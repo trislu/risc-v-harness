@@ -1,0 +1,52 @@
+# One case per line: <mnemonic>|<assembly>
+#
+# `xtask/verify-asm.sh` assembles each line with GNU as, then decodes the
+# resulting word with `rvh isa decode` and checks that the mnemonic matches.
+# Lines starting with '#' and blank lines are ignored.
+
+add|add a0,a1,a2
+sub|sub a0,a1,a2
+sll|sll a0,a1,a2
+slt|slt a0,a1,a2
+sltu|sltu a0,a1,a2
+xor|xor a0,a1,a2
+srl|srl a0,a1,a2
+sra|sra a0,a1,a2
+or|or a0,a1,a2
+and|and a0,a1,a2
+addi|addi a0,a1,7
+slti|slti a0,a1,7
+sltiu|sltiu a0,a1,7
+xori|xori a0,a1,7
+ori|ori a0,a1,7
+andi|andi a0,a1,7
+slli|slli a0,a1,3
+srli|srli a0,a1,3
+srai|srai a0,a1,3
+lb|lb a0,4(a1)
+lh|lh a0,4(a1)
+lw|lw a0,4(a1)
+lbu|lbu a0,4(a1)
+lhu|lhu a0,4(a1)
+sb|sb a0,4(a1)
+sh|sh a0,4(a1)
+sw|sw a0,4(a1)
+beq|beq a0,a1,1f
+bne|bne a0,a1,1f
+blt|blt a0,a1,1f
+bge|bge a0,a1,1f
+bltu|bltu a0,a1,1f
+bgeu|bgeu a0,a1,1f
+lui|lui a0,0x12345
+auipc|auipc a0,0x12345
+jal|jal a0,1f
+jalr|jalr a0,4(a1)
+fence|fence
+ecall|ecall
+ebreak|ebreak
+csrrw|csrrw a0,mstatus,a1
+csrrs|csrrs a0,mstatus,a1
+csrrc|csrrc a0,mstatus,a1
+csrrwi|csrrwi a0,mstatus,3
+csrrsi|csrrsi a0,mstatus,3
+csrrci|csrrci a0,mstatus,3

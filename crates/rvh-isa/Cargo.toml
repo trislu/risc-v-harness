@@ -1,0 +1,11 @@
+[package]
+name = "rvh-isa"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Instruction metadata for RISC-V, generated from isa/*.toml"
+
+[lints]
+workspace = true

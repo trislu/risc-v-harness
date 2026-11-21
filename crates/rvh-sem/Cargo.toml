@@ -1,0 +1,15 @@
+[package]
+name = "rvh-sem"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Turn a syntax tree into a program of concrete statements"
+
+[dependencies]
+rvh-isa = { path = "../rvh-isa" }
+rvh-syntax = { path = "../rvh-syntax" }
+
+[lints]
+workspace = true

@@ -1,0 +1,74 @@
+SourceFile
+  Line
+    Comment "# Deliberately broken in the ways tutorials usually are."
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+      WS " "
+    Comment "; zero the counter"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "adii"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "addi"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "4096"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrr"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "mstat"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".wor"
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+---
+diagnostics: 1
+  syntax.semicolon-comment at 70..71: `;` is a statement separator in GNU as, not a comment; use `#`
+    fix 70..71: replace with `#`
