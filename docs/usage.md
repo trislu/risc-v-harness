@@ -82,26 +82,111 @@ presets live in `rvh-sim`; an unknown name lists the ones that exist.
 
 ## VS Code extension
 
-The extension starts `rvh lsp` and contributes the `rvh` debug type.
+The extension contributes a language client for `rvh lsp`, the `rvh` debug type
+and a **Memory** view in the debug sidebar. Each VSIX carries the `rvh` binary for
+its own platform and architecture, so nothing has to be installed first.
 
 | setting | meaning |
 | --- | --- |
-| `rvh.serverPath` | path to the `rvh` binary; defaults to `rvh` on `PATH` |
+| `rvh.serverPath` | path to an `rvh` binary; empty means the copy bundled with the extension |
 | `rvh.target` | workspace default ISA |
 | `rvh.logLevel` | `quiet`, `normal` or `verbose` for the language server log |
 
-![The extension: a missing extension, the quick fix, then the target picker](../assets/vscode-fix.gif)
+`RVH_LSP_SERVER` wins over `rvh.serverPath`, so a debugging session never depends
+on user configuration.
+
+### Target
 
 The status bar shows the target the current file is analysed as. Click it, or run
 **RISC-V: Select target for this file**, to pin a target to one document; a pin
 wins over the workspace setting, and a file that declares its own target wins over
-both.
+both. "Use workspace default" removes the pin.
 
-Debugging: open a `.s` file, set breakpoints in the gutter, press F5 and pick
-**Debug this file**. The debug sidebar carries a **Memory** view that follows `sp`
-or `pc`, marks the rows with `↓` and `▶`, and highlights bytes that changed since
-the last stop. `next` executes one instruction; `ebreak` or `ecall` ends the
-session as a deliberate pause, not an exception.
+The bases are `rv32i` and `rv32e` (16 registers, ADR-0015); extensions `zicsr`,
+`m` and `a` combine as usual, for example `rv32i_zicsr`, `rv32im`, `rv32ia`. The
+64-bit bases are named but rejected (ADR-0012): the server logs a warning and
+stays on `rv32i_zicsr` rather than running code with the wrong width.
+
+![The extension: a missing extension, the quick fix, then the target picker](../assets/vscode-fix.gif)
+
+### Debugging
+
+Open a `.s` file, set breakpoints in the gutter, press F5 and pick **Debug this
+file**. Breakpoints are source lines mapped through the image's source map; a line
+with no instruction is reported unverified. `next` executes one instruction,
+because the simulator models registers and memory rather than functions, and the
+adapter reports a single stack frame. `ebreak` or `ecall` ends the session as a
+deliberate pause, not an exception.
+
+The **Memory** view follows `sp` or `pc`, marks the rows with `↓` and `▶`, and
+highlights bytes that changed since the last stop. Three controls decide the
+window:
+
+| control | meaning |
+| --- | --- |
+| **Go** | read 256 bytes starting at the address in the box |
+| **Stack (sp)** | keep the window on the stack pointer after every stop; saved registers and locals live there |
+| **Code (pc)** | keep the window on the program counter, so the bytes of the instruction about to run stay in view |
+
+### Troubleshooting
+
+Highlighting comes from the language server, not from a TextMate grammar: the
+server classifies tokens from the same CST that produces diagnostics, so `_start:`
+and a reference to `_start` are coloured differently. VS Code keeps semantic
+highlighting off unless the theme or the language enables it; the manifest sets
+`editor.semanticHighlighting.enabled` for `riscv-assembly`, so colours appear
+without any user action.
+
+If colours are missing, check in this order:
+
+1. the status bar language mode says **RISC-V Assembly**, not *Assembly*; if not,
+   add `"files.associations": { "*.s": "riscv-assembly" }` or click the language
+   name in the status bar;
+2. `Output` → **RISC-V harness** shows the client log;
+3. `Developer: Inspect Editor Tokens and Scopes` lists `semantic token type`.
+
+If completion never appears, check `editor.quickSuggestions`: the server can only
+answer a request the editor makes.
+
+The channel **RISC-V harness** records what the client and the server did:
+
+```text
+[Info] initialize, target rv32i_zicsr
+[Info] didOpen file:///…/902_error_common_mistakes.s (412 bytes)
+diagnostic 902_error_common_mistakes.s -> 2 items
+completion 902_error_common_mistakes.s:3:5 -> 105 items
+definition 902_error_common_mistakes.s:3:5 -> found
+hover 902_error_common_mistakes.s:3:5 -> none
+```
+
+Lifecycle lines go out as `MessageType.Info`, so the panel prefixes them; request
+lines go out as `MessageType.Log`, which the panel shows unadorned. That is as far
+as message types go in VS Code: there is no per-line level filter for a language
+client's channel.
+
+What is logged is decided by the server, through `rvh.logLevel`:
+
+| value | what appears |
+| --- | --- |
+| `quiet` | nothing but problems |
+| `normal` (default) | lifecycle, completion, hover, definition, and a diagnostic line **only when the count changes** |
+| `verbose` | adds `didChange`, `codeAction` and `semanticTokens` |
+
+`languageclient.trace.server: "verbose"` also sets `$/setTrace`, which the server
+honours as the same switch.
+
+The top of the channel also records activation facts: the server path and target,
+the active document's language, the server capabilities, and the two editor
+settings that decide whether completion is requested at all.
+
+Notifications such as `$/cancelRequest` and `$/setTrace` are accepted and never
+answered, because a response to a notification is a protocol violation.
+
+### Limitations
+
+- no TextMate grammar: highlighting is semantic only, so files stay plain until
+  the server is ready;
+- the 64-bit bases are named but rejected (ADR-0012).
 
 ### Working on the extension
 
@@ -113,13 +198,26 @@ session as a deliberate pause, not an exception.
 - **Run Extension (release server)** does the same with the release binary;
 - **Attach to rvh lsp** attaches to the server process; it needs CodeLLDB.
 
-`RVH_LSP_SERVER` wins over `rvh.serverPath`, so debugging never depends on user
-configuration. `preLaunchTask` runs `build: all`.
+`preLaunchTask` runs `build: all`.
 
 ```bash
 pnpm --dir editors/vscode run check     # tsc --noEmit
-pnpm --dir editors/vscode run package   # writes risc-v-harness-vscode-<version>.vsix
+pnpm --dir editors/vscode run build     # tsc --noEmit, then esbuild bundles out/extension.js
 ```
+
+A VSIX is per platform and architecture: the manifest records `TargetPlatform`,
+and the archive must carry exactly one binary, under
+`editors/vscode/bin/<platform>-<arch>/rvh`. `bin/` is gitignored, so a local build
+stages one first:
+
+```bash
+cargo build -p rvh-cli --release
+node xtask/package-vsix.mjs linux-x64 --binary target/release/rvh
+```
+
+`pnpm --dir editors/vscode run package` does the same for the host, using whatever
+binary is already staged. CI builds the whole matrix on a tag
+(`.github/workflows/vsix.yml`); each job uploads one `vsix-<target>` artifact.
 
 ## Playground
 

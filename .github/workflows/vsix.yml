@@ -1,0 +1,77 @@
+name: vsix
+
+# A VSIX that carries a binary is per platform and architecture: the manifest
+# records `TargetPlatform`, and the archive must hold exactly one binary. The
+# matrix therefore runs once per pair, on a runner of that pair.
+#
+# Tags build the whole matrix; pull requests do not, because it is expensive and
+# the Rust jobs already gate the binary itself.
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  package:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: linux-x64
+            runner: ubuntu-latest
+            triple: x86_64-unknown-linux-gnu
+          - target: linux-arm64
+            runner: ubuntu-24.04-arm
+            triple: aarch64-unknown-linux-gnu
+          # Both Apple targets build on an arm64 runner; the SDK links either arch.
+          - target: darwin-x64
+            runner: macos-14
+            triple: x86_64-apple-darwin
+          - target: darwin-arm64
+            runner: macos-14
+            triple: aarch64-apple-darwin
+          - target: win32-x64
+            runner: windows-latest
+            triple: x86_64-pc-windows-msvc
+          - target: win32-arm64
+            runner: windows-11-arm
+            triple: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: cargo build -p rvh-cli --release --target ${{ matrix.triple }}
+
+      # The script stages the binary, writes the ignore file that keeps other
+      # targets out, and runs vsce.
+      - name: Package
+        shell: bash
+        run: |
+          binary="target/${{ matrix.triple }}/release/rvh"
+          case "${{ matrix.target }}" in
+            win32-*) binary="$binary.exe" ;;
+          esac
+          node xtask/package-vsix.mjs "${{ matrix.target }}" --binary "$binary"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vsix-${{ matrix.target }}
+          path: target/vsix/*.vsix
+          if-no-files-found: error

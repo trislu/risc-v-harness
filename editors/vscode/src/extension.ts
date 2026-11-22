@@ -1,5 +1,6 @@
+import { existsSync } from 'node:fs';
 import type { ExtensionContext } from 'vscode';
-import { DebugAdapterExecutable, debug, window, workspace } from 'vscode';
+import { DebugAdapterExecutable, Uri, debug, window, workspace } from 'vscode';
 import { MemoryView, type MachineState } from './memory';
 import { TargetStatus } from './target';
 import {
@@ -12,15 +13,35 @@ import {
 let client: LanguageClient | undefined;
 
 /**
+ * The `rvh` executable to run.
+ *
+ * `RVH_LSP_SERVER` wins so a debugging session never depends on user settings;
+ * `rvh.serverPath` is the user override. Otherwise the archive ships a binary
+ * for its own platform, so the default is the copy inside the extension.
+ */
+function resolveServerPath(context: ExtensionContext): string {
+  const configured =
+    process.env.RVH_LSP_SERVER || workspace.getConfiguration('rvh').get<string>('serverPath');
+  if (configured) {
+    return configured;
+  }
+  const name = process.platform === 'win32' ? 'rvh.exe' : 'rvh';
+  return Uri.joinPath(context.extensionUri, 'bin', `${process.platform}-${process.arch}`, name)
+    .fsPath;
+}
+
+/**
  * Read the `rvh.*` settings. Called at activation and again after a change, so a
  * setting edit does not need a window reload.
  */
-function readSettings(): { serverPath: string; target: string; logLevel: string } {
+function readSettings(context: ExtensionContext): {
+  serverPath: string;
+  target: string;
+  logLevel: string;
+} {
   const configuration = workspace.getConfiguration('rvh');
   return {
-    // The launch configuration sets RVH_LSP_SERVER so that debugging never
-    // depends on a user setting; the setting is the fallback.
-    serverPath: process.env.RVH_LSP_SERVER ?? configuration.get<string>('serverPath') ?? 'rvh',
+    serverPath: resolveServerPath(context),
     target: configuration.get<string>('target') ?? 'rv32i_zicsr',
     logLevel: configuration.get<string>('logLevel') ?? 'normal',
   };
@@ -33,8 +54,19 @@ export function activate(context: ExtensionContext): void {
   const target = new TargetStatus(context, () => client);
   context.subscriptions.push(target);
 
+  // A VSIX carries one platform's binary, so a missing file means this build
+  // was installed on a platform it was not packaged for.
+  const bundled = resolveServerPath(context);
+  if (!existsSync(bundled)) {
+    output.appendLine(`no rvh binary at ${bundled}`);
+    void window.showErrorMessage(
+      `rvh was not found at ${bundled}. Set rvh.serverPath, or install the ` +
+        `${process.platform}-${process.arch} build of the extension.`,
+    );
+  }
+
   const startClient = (): void => {
-    const settings = readSettings();
+    const settings = readSettings(context);
     const pins = target?.pins() ?? {};
     output.appendLine(`server ${settings.serverPath}, target ${settings.target}`);
 
@@ -127,7 +159,7 @@ export function activate(context: ExtensionContext): void {
   context.subscriptions.push(
     debug.registerDebugAdapterDescriptorFactory('rvh', {
       createDebugAdapterDescriptor: () =>
-        new DebugAdapterExecutable(readSettings().serverPath, ['dap']),
+        new DebugAdapterExecutable(readSettings(context).serverPath, ['dap']),
     }),
   );
 }

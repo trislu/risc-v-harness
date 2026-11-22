@@ -1,7 +1,7 @@
 {
   "name": "risc-v-harness-vscode",
   "displayName": "RISC-V Harness",
-  "description": "RISC-V assembly: diagnostics, quick fixes and hover, powered by rvh",
+  "description": "Language server and debugger for RISC-V assembly: hover, quick fixes, completion and instruction-level stepping.",
   "version": "0.1.0",
   "publisher": "risc-v-harness",
   "license": "MIT OR Apache-2.0",
@@ -10,11 +10,22 @@
   },
   "categories": [
     "Programming Languages",
-    "Linters"
+    "Linters",
+    "Debuggers"
   ],
-  "activationEvents": [
-    "onLanguage:riscv-assembly"
+  "keywords": [
+    "risc-v",
+    "riscv",
+    "rv32i",
+    "assembly",
+    "language-server",
+    "lsp",
+    "debugger",
+    "dap",
+    "simulator",
+    "emulator"
   ],
+  "icon": "media/icon.png",
   "main": "./out/extension.js",
   "contributes": {
     "languages": [
@@ -36,8 +47,8 @@
       "properties": {
         "rvh.serverPath": {
           "type": "string",
-          "default": "rvh",
-          "description": "Path to the rvh binary. The extension starts it as `rvh lsp`."
+          "default": "",
+          "markdownDescription": "Path to an `rvh` binary. Leave empty to use the copy bundled with the extension for this platform; `RVH_LSP_SERVER` overrides both."
         },
         "rvh.target": {
           "type": "string",
@@ -126,7 +137,8 @@
         {
           "type": "webview",
           "id": "rvh.memory",
-          "name": "Memory"
+          "name": "Memory",
+          "icon": "$(circuit-board)"
         }
       ]
     },
@@ -141,7 +153,7 @@
     "build": "tsc -p . --noEmit && esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap",
     "check": "tsc -p . --noEmit",
     "watch": "esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap --watch",
-    "package": "npm run build && vsce package --no-dependencies"
+    "package": "node ../../xtask/package-vsix.mjs"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"
