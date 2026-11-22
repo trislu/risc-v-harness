@@ -765,6 +765,21 @@ impl Machine {
                 };
                 self.write_freg(rd, value.to_bits(), changes);
             }
+            "fmadd.s" | "fmsub.s" | "fnmsub.s" | "fnmadd.s" => {
+                // The fourth source sits in bits 31:27; the product and the addend
+                // round once, which is the point of the fused form.
+                let rs3 = ((word >> 27) & 0x1f) as usize;
+                let left = f32::from_bits(self.fregs[rs1]);
+                let right = f32::from_bits(self.fregs[rs2]);
+                let addend = f32::from_bits(self.fregs[rs3]);
+                let value = match insn.mnemonic {
+                    "fmadd.s" => left.mul_add(right, addend),
+                    "fmsub.s" => left.mul_add(right, -addend),
+                    "fnmsub.s" => (-left).mul_add(right, addend),
+                    _ => (-left).mul_add(right, -addend),
+                };
+                self.write_freg(rd, value.to_bits(), changes);
+            }
             "fsgnj.s" | "fsgnjn.s" | "fsgnjx.s" => {
                 let left = self.fregs[rs1];
                 let right = self.fregs[rs2];
@@ -1455,6 +1470,16 @@ mod float_tests {
         assert_eq!(machine.reg(12), 0);
         assert_eq!(machine.reg(13), 1 << 6, "positive normal");
         assert_eq!(machine.reg(14), 1 << 1, "negative normal");
+    }
+
+    #[test]
+    fn the_fused_forms_round_once() {
+        // 1.0 * (1 + 2^-23) + (-1.0) is 2^-23 when fused; separate steps would
+        // round the product to 1.0 first and return 0.
+        let machine = run(
+            "_start:\n    li t0, 0x3f800000\n    fmv.w.x f0, t0\n    li t1, 0x3f800001\n    fmv.w.x f1, t1\n    li t2, -1082130432\n    fmv.w.x f2, t2\n    fmadd.s f4, f0, f1, f2\n    fmv.x.w a0, f4\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 0x3400_0000, "2^-23");
     }
 
     #[test]

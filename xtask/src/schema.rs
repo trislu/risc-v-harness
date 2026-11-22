@@ -14,7 +14,7 @@ pub const FIELDS: &[&str] = &[
 ];
 
 const FORMATS: &[&str] = &[
-    "R", "I", "S", "B", "U", "J", "CI", "CR", "CSS", "CIW", "CL", "CS", "CA", "CB", "CJ",
+    "R", "I", "S", "B", "U", "J", "CI", "CR", "CSS", "CIW", "CL", "CS", "CA", "CB", "CJ", "R4",
 ];
 
 #[derive(Debug)]
@@ -315,7 +315,7 @@ fn parse_operand(file: &str, line: usize, text: &str) -> Result<Operand, Error> 
     let parts: Vec<&str> = text.split(':').collect();
     let kind = parts[0];
     let (bits, signed, align) = match kind {
-        "frd" | "frs1" | "frs2" => {
+        "frd" | "frs1" | "frs2" | "frs3" => {
             if parts.get(1) != Some(&"fr") || parts.len() != 2 {
                 return Err(err(
                     file,

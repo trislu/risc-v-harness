@@ -83,9 +83,12 @@ adapter and a browser playground, all over one assembler and one simulator.
   change log records their writes so undo reaches them.
 - Conversions round to nearest, ties to even, and saturate at the integer bounds;
   `fclass` reports the ten categories; a NaN operand loses `fmin`/`fmax`.
-- Not yet: the fused multiply-add family (`R4`), `fcsr` (rounding mode and flags),
-  and the D extension. The encodings use the dynamic-rounding field, which the
-  simulator treats as round-to-nearest-even.
+- The fused multiply-add family (`fmadd.s`, `fmsub.s`, `fnmsub.s`, `fnmadd.s`)
+  rounds its product and addend once, through Rust's `mul_add`; a test pins the
+  case where one rounding and two roundings differ.
+- Not yet: `fcsr` (rounding mode and flags) and the D extension. The encodings
+  use the dynamic-rounding field, which the simulator treats as
+  round-to-nearest-even.
 
 #### Raw encodings
 

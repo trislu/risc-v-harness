@@ -1533,7 +1533,7 @@ fn check_operand(insn: &Insn, spec: rvh_isa::Operand, op: &Op, index: usize) -> 
                 describe(other)
             )),
         },
-        OperandKind::Frd | OperandKind::Frs1 | OperandKind::Frs2 => match op {
+        OperandKind::Frd | OperandKind::Frs1 | OperandKind::Frs2 | OperandKind::Frs3 => match op {
             Op::FReg(_) => Ok(()),
             other => Err(format!(
                 "operand {} of `{}` must be a floating-point register, found {}",

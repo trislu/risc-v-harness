@@ -295,14 +295,9 @@ fn encode_compressed_fields(
     let mut imm: i64 = 0;
     for (spec, op) in insn.operands.iter().zip(ops.iter()) {
         match spec.kind {
-            OperandKind::Rd => rd = register(op)?,
-            OperandKind::Rs1 => rs1 = register(op)?,
-            OperandKind::Rs2 => rs2 = register(op)?,
-            // A floating-point register sits in the same five-bit field; which
-            // file it names is the instruction's business.
-            OperandKind::Frd => rd = register(op)?,
-            OperandKind::Frs1 => rs1 = register(op)?,
-            OperandKind::Frs2 => rs2 = register(op)?,
+            OperandKind::Rd | OperandKind::Frd => rd = register(op)?,
+            OperandKind::Rs1 | OperandKind::Frs1 => rs1 = register(op)?,
+            OperandKind::Rs2 | OperandKind::Frs2 => rs2 = register(op)?,
             _ => imm = immediate(op, pc, labels)?,
         }
     }
@@ -522,6 +517,7 @@ fn encode_insn(
     let mut rd = 0u32;
     let mut rs1 = 0u32;
     let mut rs2 = 0u32;
+    let mut rs3 = 0u32;
     let mut imm: i64 = 0;
 
     for (spec, op) in insn.operands.iter().zip(ops.iter()) {
@@ -534,6 +530,7 @@ fn encode_insn(
             OperandKind::Frd => rd = register(op)?,
             OperandKind::Frs1 => rs1 = register(op)?,
             OperandKind::Frs2 => rs2 = register(op)?,
+            OperandKind::Frs3 => rs3 = register(op)?,
             OperandKind::Imm | OperandKind::Csr | OperandKind::Zimm | OperandKind::Shamt => {
                 imm = immediate(op, pc, labels)?;
             }
@@ -582,6 +579,11 @@ fn encode_insn(
             if let Some(funct7) = insn.funct7 {
                 word |= u32::from(funct7) << 25;
             }
+        }
+        Format::R4 => {
+            // The format field is zero for single precision; the fourth source
+            // sits at the top of the word.
+            word |= rs2 << 20 | rs3 << 27;
         }
         Format::I => {
             let field = if let Some(funct7) = insn.funct7 {

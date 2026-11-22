@@ -80,6 +80,7 @@ fn format_variant(format: &str) -> &'static str {
         "CA" => "Ca",
         "CB" => "Cb",
         "CJ" => "Cj",
+        "R4" => "R4",
         other => unreachable!("schema rejected format `{other}`"),
     }
 }
@@ -92,6 +93,7 @@ fn kind_variant(kind: &str) -> &'static str {
         "frd" => "Frd",
         "frs1" => "Frs1",
         "frs2" => "Frs2",
+        "frs3" => "Frs3",
         "imm" => "Imm",
         "shamt" => "Shamt",
         "csr" => "Csr",

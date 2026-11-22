@@ -235,3 +235,45 @@ funct7 = 0b1101000
 funct5 = 0b00001
 class = "convert"
 operands = ["frd:fr", "rs1:gpr"]
+
+# Fused multiply-add: a fourth source register, and `fmt` zero for single
+# precision. The rounding field is dynamic, as everywhere else in this file.
+[[insn]]
+id = "fmadd-s"
+mnemonic = "fmadd.s"
+ext = "f"
+format = "R4"
+opcode = 0b1000011
+funct3 = 0b111
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fmsub-s"
+mnemonic = "fmsub.s"
+ext = "f"
+format = "R4"
+opcode = 0b1000111
+funct3 = 0b111
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fnmsub-s"
+mnemonic = "fnmsub.s"
+ext = "f"
+format = "R4"
+opcode = 0b1001011
+funct3 = 0b111
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fnmadd-s"
+mnemonic = "fnmadd.s"
+ext = "f"
+format = "R4"
+opcode = 0b1001111
+funct3 = 0b111
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]

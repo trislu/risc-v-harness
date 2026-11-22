@@ -244,6 +244,10 @@ _start:
     fcvt.wu.s a6, f0
     fcvt.s.w f12, a5
     fcvt.s.wu f13, a5
+    fmadd.s f14, f0, f1, f2
+    fmsub.s f15, f0, f1, f2
+    fnmsub.s f16, f0, f1, f2
+    fnmadd.s f17, f0, f1, f2
     ebreak
 EOF
 riscv64-linux-gnu-as -march=rv32if -mabi=ilp32f -o "$work/f.o" "$work/f.s"

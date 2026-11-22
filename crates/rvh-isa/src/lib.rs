@@ -32,6 +32,8 @@ pub enum Format {
     Ca,
     Cb,
     Cj,
+    /// The four-register fused multiply-add format.
+    R4,
 }
 
 impl Format {
@@ -39,7 +41,7 @@ impl Format {
     #[must_use]
     pub fn size(self) -> u8 {
         match self {
-            Self::R | Self::I | Self::S | Self::B | Self::U | Self::J => 4,
+            Self::R | Self::I | Self::S | Self::B | Self::U | Self::J | Self::R4 => 4,
             Self::Ci
             | Self::Cr
             | Self::Css
@@ -71,6 +73,7 @@ impl Format {
             "CA" => Self::Ca,
             "CB" => Self::Cb,
             "CJ" => Self::Cj,
+            "R4" => Self::R4,
             _ => return None,
         })
     }
@@ -94,6 +97,7 @@ impl Format {
             Self::Ca => "CA",
             Self::Cb => "CB",
             Self::Cj => "CJ",
+            Self::R4 => "R4",
         }
     }
 }
@@ -195,6 +199,15 @@ impl Format {
                 ("opcode", 1, 0),
             ],
             Self::Cj => &[("funct3", 15, 13), ("imm", 12, 2), ("opcode", 1, 0)],
+            Self::R4 => &[
+                ("rs3", 31, 27),
+                ("fmt", 26, 25),
+                ("rs2", 24, 20),
+                ("rs1", 19, 15),
+                ("funct3", 14, 12),
+                ("rd", 11, 7),
+                ("opcode", 6, 0),
+            ],
         }
     }
 }
@@ -209,6 +222,8 @@ pub enum OperandKind {
     Frd,
     Frs1,
     Frs2,
+    /// The third source of a fused multiply-add.
+    Frs3,
     Imm,
     Shamt,
     Csr,
@@ -227,6 +242,7 @@ impl OperandKind {
             Self::Frd => "frd",
             Self::Frs1 => "frs1",
             Self::Frs2 => "frs2",
+            Self::Frs3 => "frs3",
             Self::Imm => "imm",
             Self::Shamt => "shamt",
             Self::Csr => "csr",
@@ -408,8 +424,8 @@ mod tests {
     fn table_is_complete() {
         assert_eq!(
             all().len(),
-            112,
-            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 21 RV32F instructions"
+            116,
+            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 25 RV32F instructions"
         );
         assert_eq!(extensions(), vec!["a", "c", "f", "i", "m", "zicsr"]);
     }
