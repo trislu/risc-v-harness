@@ -1,0 +1,88 @@
+# RV32F, first slice: loads and stores, the four arithmetic operations, and the
+# moves between the two register files. Comparisons and conversions come next.
+
+[[insn]]
+id = "flw"
+mnemonic = "flw"
+ext = "f"
+format = "I"
+opcode = 0b0000111
+funct3 = 0b010
+class = "load"
+operands = ["frd:fr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "fsw"
+mnemonic = "fsw"
+ext = "f"
+format = "S"
+opcode = 0b0100111
+funct3 = 0b010
+class = "store"
+operands = ["frs2:fr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "fadd-s"
+mnemonic = "fadd.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0000000
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsub-s"
+mnemonic = "fsub.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0000100
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmul-s"
+mnemonic = "fmul.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0001000
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fdiv-s"
+mnemonic = "fdiv.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0001100
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmv-w-x"
+mnemonic = "fmv.w.x"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1111000
+class = "move"
+operands = ["frd:fr", "rs1:gpr"]
+
+[[insn]]
+id = "fmv-x-w"
+mnemonic = "fmv.x.w"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1110000
+class = "move"
+operands = ["rd:gpr", "frs1:fr"]

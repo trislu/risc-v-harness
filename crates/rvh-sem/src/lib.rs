@@ -85,6 +85,7 @@ pub const DIRECTIVES: &[&str] = &[
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Arg {
     Reg(u8),
+    FReg(u8),
     Imm(i64),
     /// A label or constant.
     Sym(String),
@@ -99,6 +100,8 @@ pub enum Arg {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Op {
     Reg(u8),
+    /// A floating-point register, `f0`..`f31`.
+    FReg(u8),
     Imm(i64),
     /// A label or constant. Branches and `jal` keep it symbolic until layout.
     Sym(String),
@@ -634,6 +637,7 @@ impl<'a> Ctx<'a> {
                 let register = reg(rd).unwrap();
                 let value = match value {
                     Op::Imm(value) => *value,
+                    Op::FReg(_) => return Vec::new(),
                     Op::Sym(name) => match self.constants.get(name) {
                         Some(value) => *value,
                         None => {
@@ -923,6 +927,7 @@ impl<'a> Ctx<'a> {
     fn csr(&mut self, op: &Op, span: (usize, usize)) -> Option<i64> {
         let value = match op {
             Op::Imm(value) => *value,
+            Op::FReg(_) => return None,
             Op::Sym(name) => match CSR_NAMES.iter().find(|(csr, _)| csr == name) {
                 Some((_, value)) => *value,
                 None => {
@@ -1272,8 +1277,36 @@ fn set_statement_symbol(stmt: &mut Stmt, target: String) {
     }
 }
 
-/// Parse a register name, including the ABI names.
+/// `f0`..`f31`, plus the psABI names (`ft0`, `fs0`, `fa0`, ...).
 #[must_use]
+pub fn parse_float_register(text: &str) -> Option<u8> {
+    let lowered = text.to_ascii_lowercase();
+    if let Some(rest) = lowered.strip_prefix('f') {
+        if let Ok(index) = rest.parse::<u8>() {
+            if index < 32 {
+                return Some(index);
+            }
+        }
+    }
+    const NAMES: [&str; 3] = ["ft", "fs", "fa"];
+    for (group, prefix) in NAMES.iter().enumerate() {
+        if let Some(rest) = lowered.strip_prefix(prefix) {
+            let Ok(index) = rest.parse::<u8>() else {
+                continue;
+            };
+            let limit = if group == 2 { 8 } else { 12 };
+            if index < limit {
+                return Some(match group {
+                    0 => index,
+                    1 => 8 + index,
+                    _ => 10 + index,
+                });
+            }
+        }
+    }
+    None
+}
+
 pub fn parse_register(text: &str) -> Option<u8> {
     let named = match text {
         "zero" => Some(0),
@@ -1320,6 +1353,9 @@ pub fn parse_register(text: &str) -> Option<u8> {
 
 /// Classify one syntactic argument.
 pub fn classify(text: &str) -> Result<Arg, String> {
+    if let Some(register) = parse_float_register(text) {
+        return Ok(Arg::FReg(register));
+    }
     if let Some(register) = parse_register(text) {
         return Ok(Arg::Reg(register));
     }
@@ -1407,6 +1443,7 @@ fn flatten_with_spans(args: &[Arg], spans: &[(usize, usize)]) -> (Vec<Op>, Vec<(
         };
         match arg {
             Arg::Reg(register) => push(Op::Reg(*register)),
+            Arg::FReg(register) => push(Op::FReg(*register)),
             Arg::Imm(value) => push(Op::Imm(*value)),
             Arg::Sym(name) => push(Op::Sym(name.clone())),
             Arg::Mem { base, offset } => {
@@ -1496,6 +1533,15 @@ fn check_operand(insn: &Insn, spec: rvh_isa::Operand, op: &Op, index: usize) -> 
                 describe(other)
             )),
         },
+        OperandKind::Frd | OperandKind::Frs1 | OperandKind::Frs2 => match op {
+            Op::FReg(_) => Ok(()),
+            other => Err(format!(
+                "operand {} of `{}` must be a floating-point register, found {}",
+                index + 1,
+                insn.mnemonic,
+                describe(other)
+            )),
+        },
         OperandKind::Csr => match op {
             Op::Imm(value) if (0..=0xfff).contains(value) => Ok(()),
             Op::Imm(value) => Err(format!("CSR {value} does not fit in 12 bits")),
@@ -1518,7 +1564,9 @@ fn check_operand(insn: &Insn, spec: rvh_isa::Operand, op: &Op, index: usize) -> 
             match op {
                 Op::Sym(_) if branch => Ok(()),
                 Op::Sym(name) => Err(format!("`{name}` cannot be used as an immediate here")),
-                Op::Reg(_) => Err(format!("expected an immediate, found {}", describe(op))),
+                Op::Reg(_) | Op::FReg(_) => {
+                    Err(format!("expected an immediate, found {}", describe(op)))
+                }
                 Op::Imm(value) => {
                     let (low, high) = spec.range();
                     if *value < low || *value > high {
@@ -1544,6 +1592,7 @@ fn check_operand(insn: &Insn, spec: rvh_isa::Operand, op: &Op, index: usize) -> 
 fn describe(op: &Op) -> String {
     match op {
         Op::Reg(register) => format!("register x{register}"),
+        Op::FReg(register) => format!("register f{register}"),
         Op::Imm(value) => format!("immediate {value}"),
         Op::Sym(name) => format!("symbol `{name}`"),
     }

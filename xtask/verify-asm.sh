@@ -216,5 +216,33 @@ else
     fail=$((fail + 1))
 fi
 
+# RV32F, first slice: loads, stores, arithmetic and the moves.
+cat >"$work/f.s" <<'EOF'
+    .text
+    .globl _start
+_start:
+    li t0, 0x100
+    flw f0, 0(t0)
+    flw f1, 4(t0)
+    fadd.s f2, f0, f1
+    fsub.s f3, f0, f1
+    fmul.s f4, f0, f1
+    fdiv.s f5, f0, f1
+    fmv.x.w a0, f2
+    fmv.w.x f6, a0
+    fsw f2, 8(t0)
+    ebreak
+EOF
+riscv64-linux-gnu-as -march=rv32if -mabi=ilp32f -o "$work/f.o" "$work/f.s"
+riscv64-linux-gnu-ld -m elf32lriscv -Ttext=0 --no-relax -o "$work/f.elf" "$work/f.o"
+riscv64-linux-gnu-objcopy -O binary -j .text "$work/f.elf" "$work/f.gnu.bin"
+"$rvh" asm "$work/f.s" --target rv32if --text "$work/f.ours.bin" >/dev/null
+if cmp -s "$work/f.gnu.bin" "$work/f.ours.bin"; then
+    pass=$((pass + 1))
+else
+    echo "BYTES-DIFF rv32f: our .text differs from GNU as + ld"
+    fail=$((fail + 1))
+fi
+
 echo "verify-asm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

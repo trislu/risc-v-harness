@@ -258,7 +258,7 @@ fn size_of(stmt: &Stmt, addr: u32) -> u32 {
 
 fn register(op: &Op) -> Result<u32, String> {
     match op {
-        Op::Reg(value) => Ok(u32::from(*value)),
+        Op::Reg(value) | Op::FReg(value) => Ok(u32::from(*value)),
         other => Err(format!("expected a register, found {other:?}")),
     }
 }
@@ -275,7 +275,7 @@ fn immediate(op: &Op, pc: u32, labels: &HashMap<String, u32>) -> Result<i64, Str
             let target = labels.get(name.as_str()).ok_or_else(|| undefined(name))?;
             Ok(i64::from(*target) - i64::from(pc))
         }
-        Op::Reg(_) => Err("expected an immediate, found a register".to_string()),
+        Op::Reg(_) | Op::FReg(_) => Err("expected an immediate, found a register".to_string()),
     }
 }
 
@@ -298,6 +298,11 @@ fn encode_compressed_fields(
             OperandKind::Rd => rd = register(op)?,
             OperandKind::Rs1 => rs1 = register(op)?,
             OperandKind::Rs2 => rs2 = register(op)?,
+            // A floating-point register sits in the same five-bit field; which
+            // file it names is the instruction's business.
+            OperandKind::Frd => rd = register(op)?,
+            OperandKind::Frs1 => rs1 = register(op)?,
+            OperandKind::Frs2 => rs2 = register(op)?,
             _ => imm = immediate(op, pc, labels)?,
         }
     }
@@ -524,6 +529,11 @@ fn encode_insn(
             OperandKind::Rd => rd = register(op)?,
             OperandKind::Rs1 => rs1 = register(op)?,
             OperandKind::Rs2 => rs2 = register(op)?,
+            // A floating-point register sits in the same five-bit field; which
+            // file it names is the instruction's business.
+            OperandKind::Frd => rd = register(op)?,
+            OperandKind::Frs1 => rs1 = register(op)?,
+            OperandKind::Frs2 => rs2 = register(op)?,
             OperandKind::Imm | OperandKind::Csr | OperandKind::Zimm | OperandKind::Shamt => {
                 imm = immediate(op, pc, labels)?;
             }

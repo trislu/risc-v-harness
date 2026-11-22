@@ -312,6 +312,16 @@ fn parse_operand(file: &str, line: usize, text: &str) -> Result<Operand, Error> 
     let parts: Vec<&str> = text.split(':').collect();
     let kind = parts[0];
     let (bits, signed, align) = match kind {
+        "frd" | "frs1" | "frs2" => {
+            if parts.get(1) != Some(&"fr") || parts.len() != 2 {
+                return Err(err(
+                    file,
+                    line,
+                    format!("expected `{kind}:fr`, found `{text}`"),
+                ));
+            }
+            (5u8, false, 1u8)
+        }
         "rd" | "rs1" | "rs2" => {
             if parts.get(1) != Some(&"gpr") || parts.len() != 2 {
                 return Err(err(

@@ -88,6 +88,16 @@ fn a_file_that_declares_its_target_uses_it() {
 }
 
 #[test]
+fn the_float_registers_carry_their_bit_patterns() {
+    // 1.5 + 2.25 = 3.75 and 2.25 - 1.5 = 0.75, read back through `fmv.x.w`.
+    let machine = run("010_float.s");
+    assert_eq!(machine.reg(10), 0x4070_0000);
+    assert_eq!(machine.reg(11), 0x3f40_0000);
+    // The store and the load round-trip through memory.
+    assert_eq!(machine.freg(3), machine.freg(2));
+}
+
+#[test]
 fn the_compressed_instructions_run() {
     // Six two-byte instructions: 6 + 7 = 13, +1 = 14, <<1 = 28, then c.mv.
     let machine = run("009_compressed.s");

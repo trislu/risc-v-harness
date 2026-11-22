@@ -28,6 +28,12 @@ rvh dap                              # DAP on stdin/stdout
 vendor instruction whose encoding is known but whose semantics are not; the
 simulator runs it only when the word happens to decode as an instruction it knows.
 
+`--target rv32if` assembles and runs the first RV32F slice: `flw`, `fsw`,
+`fadd.s`, `fsub.s`, `fmul.s`, `fdiv.s`, `fmv.w.x` and `fmv.x.w`. The floating
+registers hold 32-bit patterns, arithmetic goes through IEEE 754 single precision,
+and `fcsr` (rounding mode and flags) is not modelled yet: the encodings use the
+dynamic-rounding field, which the simulator treats as round-to-nearest-even.
+
 `--target rv32ic` assembles and runs the 26 RV32C instructions: the simulator reads
 two bytes first, decodes a compressed word when the low bits are not `11`, and
 steps by two (ADR-0018). `009_compressed.s` declares the extension with
@@ -116,6 +122,7 @@ step, run and undo. The README animation is recorded from this page by
 | 007 | [007_arch_attribute.s](../tests/corpus/007_arch_attribute.s) | `.attribute arch` |
 | 008 | [008_rv32e.s](../tests/corpus/008_rv32e.s) | the embedded base |
 | 009 | [009_compressed.s](../tests/corpus/009_compressed.s) | the compressed extension |
+| 010 | [010_float.s](../tests/corpus/010_float.s) | floating point registers |
 
 `tests/corpus/README.md` records the numbering rules.
 

@@ -1,0 +1,189 @@
+SourceFile
+  Line
+    Comment "# Floating point: the F extension keeps its own register file."
+    NL "\n"
+  Line
+    Comment "# Values are loaded as bit patterns, so the arithmetic is visible in the integer"
+    NL "\n"
+  Line
+    Comment "# registers after `fmv.x.w`."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".attribute"
+      WS " "
+      Op
+        Ident "arch"
+      Comma ","
+      WS " "
+      Op
+        String "\"rv32i2p1_f2p0\""
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "0x3fc00000"
+      WS "        "
+    Comment "# 1.5"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmv.w.x"
+      WS " "
+      Op
+        Ident "f0"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0x40100000"
+      WS "        "
+    Comment "# 2.25"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmv.w.x"
+      WS " "
+      Op
+        Ident "f1"
+      Comma ","
+      WS " "
+      Op
+        Ident "t1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fadd.s"
+      WS " "
+      Op
+        Ident "f2"
+      Comma ","
+      WS " "
+      Op
+        Ident "f0"
+      Comma ","
+      WS " "
+      Op
+        Ident "f1"
+      WS "        "
+    Comment "# 3.75"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmv.x.w"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "f2"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fsw"
+      WS " "
+      Op
+        Ident "f2"
+      Comma ","
+      WS " "
+      Op
+        Number "0x100"
+        LParen "("
+        Ident "zero"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "flw"
+      WS " "
+      Op
+        Ident "f3"
+      Comma ","
+      WS " "
+      Op
+        Number "0x100"
+        LParen "("
+        Ident "zero"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fsub.s"
+      WS " "
+      Op
+        Ident "f4"
+      Comma ","
+      WS " "
+      Op
+        Ident "f1"
+      Comma ","
+      WS " "
+      Op
+        Ident "f0"
+      WS "        "
+    Comment "# 0.75"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmv.x.w"
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Ident "f4"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

@@ -266,6 +266,11 @@ impl Session {
                         ("old", number(*old as f64)),
                         ("new", number(machine.reg(usize::from(*index)) as f64)),
                     ]),
+                    Change::FReg { index, old } => object(vec![
+                        ("freg", number(*index as f64)),
+                        ("old", number(*old as f64)),
+                        ("new", number(machine.freg(usize::from(*index)) as f64)),
+                    ]),
                     Change::Mem { addr, old } => object(vec![
                         ("addr", number(*addr as f64)),
                         ("old", number(*old as f64)),

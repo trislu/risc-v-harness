@@ -67,6 +67,7 @@ pub const TRACE_LIMIT: usize = 100_000;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Change {
     Reg { index: u8, old: u32 },
+    FReg { index: u8, old: u32 },
     Mem { addr: u32, old: u8 },
 }
 
@@ -98,6 +99,8 @@ pub struct Machine {
     pc: u32,
     regs: [u32; 32],
     ram: Vec<u8>,
+    /// Floating-point registers, held as their 32-bit patterns.
+    fregs: [u32; 32],
     csrs: Vec<u32>,
     output: Vec<u8>,
     steps: u64,
@@ -174,6 +177,7 @@ impl Machine {
             pc: 0,
             regs,
             ram: vec![0; board.ram_size],
+            fregs: [0; 32],
             csrs: vec![0; 4096],
             output: Vec::new(),
             steps: 0,
@@ -206,6 +210,12 @@ impl Machine {
     #[must_use]
     pub fn pc(&self) -> u32 {
         self.pc
+    }
+
+    /// A floating-point register as its 32-bit pattern.
+    #[must_use]
+    pub fn freg(&self, index: usize) -> u32 {
+        self.fregs.get(index).copied().unwrap_or(0)
     }
 
     #[must_use]
@@ -367,6 +377,7 @@ impl Machine {
         for change in step.changes.iter().rev() {
             match change {
                 Change::Reg { index, old } => self.regs[*index as usize] = *old,
+                Change::FReg { index, old } => self.fregs[*index as usize] = *old,
                 Change::Mem { addr, old } => {
                     if let Some(slot) = self.ram.get_mut(*addr as usize) {
                         *slot = *old;
@@ -434,6 +445,21 @@ impl Machine {
                 true
             }
             None => false,
+        }
+    }
+
+    fn write_freg(&mut self, index: usize, value: u32, changes: &mut Vec<Change>) {
+        // Every floating-point register is writable; only the integer x0 is not.
+        if index >= 32 {
+            return;
+        }
+        let old = self.fregs[index];
+        if old != value {
+            changes.push(Change::FReg {
+                index: index as u8,
+                old,
+            });
+            self.fregs[index] = value;
         }
     }
 
@@ -710,6 +736,42 @@ impl Machine {
                     return Err(HaltReason::Fault { pc, addr: a });
                 }
                 self.write_reg(rd, old, changes);
+            }
+
+            // RV32F, first slice: the register file holds 32-bit patterns, and
+            // arithmetic goes through Rust's `f32` (NaN and infinity included).
+            "flw" => {
+                let addr = a.wrapping_add(imm_i as u32);
+                match self.read_value(addr, 4, false) {
+                    Some(bits) => self.write_freg(rd, bits, changes),
+                    None => return Err(HaltReason::Fault { pc, addr }),
+                }
+            }
+            "fsw" => {
+                let addr = a.wrapping_add(imm_s(word) as u32);
+                let bits = self.fregs[rs2];
+                if !self.store(addr, 4, bits, changes) {
+                    return Err(HaltReason::Fault { pc, addr });
+                }
+            }
+            "fadd.s" | "fsub.s" | "fmul.s" | "fdiv.s" => {
+                let left = f32::from_bits(self.fregs[rs1]);
+                let right = f32::from_bits(self.fregs[rs2]);
+                let value = match insn.mnemonic {
+                    "fadd.s" => left + right,
+                    "fsub.s" => left - right,
+                    "fmul.s" => left * right,
+                    _ => left / right,
+                };
+                self.write_freg(rd, value.to_bits(), changes);
+            }
+            "fmv.w.x" => {
+                let bits = a;
+                self.write_freg(rd, bits, changes);
+            }
+            "fmv.x.w" => {
+                let bits = self.fregs[rs1];
+                self.write_reg(rd, bits, changes);
             }
 
             "lb" | "lh" | "lw" | "lbu" | "lhu" => {

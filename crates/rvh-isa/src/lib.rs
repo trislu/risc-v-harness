@@ -205,6 +205,10 @@ pub enum OperandKind {
     Rd,
     Rs1,
     Rs2,
+    /// Floating-point registers, which live in their own file.
+    Frd,
+    Frs1,
+    Frs2,
     Imm,
     Shamt,
     Csr,
@@ -220,6 +224,9 @@ impl OperandKind {
             Self::Rd => "rd",
             Self::Rs1 => "rs1",
             Self::Rs2 => "rs2",
+            Self::Frd => "frd",
+            Self::Frs1 => "frs1",
+            Self::Frs2 => "frs2",
             Self::Imm => "imm",
             Self::Shamt => "shamt",
             Self::Csr => "csr",
@@ -395,10 +402,10 @@ mod tests {
     fn table_is_complete() {
         assert_eq!(
             all().len(),
-            91,
-            "40 RV32I, 6 Zicsr, 8 M, 11 A and 26 RV32C instructions"
+            99,
+            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 8 RV32F instructions"
         );
-        assert_eq!(extensions(), vec!["a", "c", "i", "m", "zicsr"]);
+        assert_eq!(extensions(), vec!["a", "c", "f", "i", "m", "zicsr"]);
     }
 
     #[test]
