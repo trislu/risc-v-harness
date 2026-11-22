@@ -16,6 +16,11 @@
 
   const EMPTY_REGS = new Array<number>(32).fill(0);
 
+  // The overlays that exist under `content/overlay/`; `rvh-content` normalizes
+  // anything else to English.
+  const LOCALES = ['en', 'zh-CN'] as const;
+  type Locale = (typeof LOCALES)[number];
+
   const NAMES = [
     'zero', 'ra', 'sp', 'gp', 'tp', 't0', 't1', 't2', 's0', 's1', 'a0', 'a1', 'a2', 'a3', 'a4',
     'a5', 'a6', 'a7', 's2', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10', 's11', 't3', 't4',
@@ -24,6 +29,7 @@
 
   let engine = $state(null as Engine | null);
   let target = $state('rv32i_zicsr');
+  let locale = $state(readLocale());
   let editor: Editor | null = null;
   let editorHost: HTMLDivElement;
   let machine = $state(null as MachineState | null);
@@ -50,8 +56,9 @@
   let halted = $derived(machine?.halt ? `halted: ${machine.halt}` : 'running');
 
   onMount(async () => {
+    document.documentElement.lang = locale;
     try {
-      engine = await Engine.load(target);
+      engine = await createEngine(target);
       editor = createEditor(editorHost, SAMPLE, () => analyze());
       analyze();
     } catch (error) {
@@ -75,6 +82,32 @@
     }
   }
 
+  /// The locale comes from `?lang=`, so a link can pin it and the browser suite
+  /// can check it. Unknown values fall back to English, as `rvh-content` does.
+  function readLocale(): Locale {
+    const requested = new URLSearchParams(location.search).get('lang');
+    return LOCALES.find((name) => name.toLowerCase() === requested?.toLowerCase()) ?? 'en';
+  }
+
+  /// A new session starts in English, so every rebuild has to re-apply it.
+  async function createEngine(next: string): Promise<Engine> {
+    const created = await Engine.load(next);
+    created.setLocale(locale);
+    return created;
+  }
+
+  /// Switch the content locale, then reflect it in the URL and in `<html lang>`.
+  /// Only hover text is translated today, and this page has no hover view yet,
+  /// so the switch becomes visible once that view lands.
+  function pickLocale(next: string) {
+    locale = LOCALES.find((name) => name === next) ?? 'en';
+    engine?.setLocale(locale);
+    const url = new URL(location.href);
+    url.searchParams.set('lang', locale);
+    history.replaceState(null, '', url);
+    document.documentElement.lang = locale;
+  }
+
   /// Switch the ISA: a new session, then re-assemble the same text.
   async function pickTarget(next: string) {
     if (!engine || next === target) {
@@ -83,7 +116,7 @@
     const source = editor?.text() ?? SAMPLE;
     const previous = engine;
     try {
-      engine = await Engine.load(next);
+      engine = await createEngine(next);
       target = next;
       previous.dispose();
       editor?.setText(source);
@@ -167,6 +200,17 @@
     <span class="halt">{halted}</span>
     <span class="steps">{machine ? `${machine.steps} step(s) at ${hex(machine.pc)}` : ''}</span>
   </div>
+  <label class="locale-picker" title="Content locale: hover text">
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.25" />
+      <ellipse cx="8" cy="8" rx="2.6" ry="6.25" />
+      <path d="M1.75 8h12.5" />
+    </svg>
+    <select class="locale" aria-label="Content locale" onchange={(event) => pickLocale(event.currentTarget.value)}>
+      <option value="en" selected={locale === 'en'}>English</option>
+      <option value="zh-CN" selected={locale === 'zh-CN'}>中文</option>
+    </select>
+  </label>
 </header>
 
 <main>
@@ -271,6 +315,32 @@
     gap: 0.5rem;
     flex-wrap: wrap;
     font-size: 0.85rem;
+  }
+
+  select {
+    background: #232830;
+    color: inherit;
+    border: 1px solid #343b45;
+    border-radius: 4px;
+    padding: 0.22rem 0.4rem;
+    font-size: 0.85rem;
+  }
+
+  /* The globe sits at the right edge; `margin-left: auto` is what pins it there
+     while the toolbar keeps growing to its left. */
+  .locale-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-left: auto;
+    color: #8b95a4;
+  }
+
+  .locale-picker svg {
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.2;
   }
 
   button {

@@ -140,6 +140,21 @@ test('the target selector decides which instructions are legal', async ({ page }
   await expect(page.locator('.diagnostics')).toHaveCount(0);
 });
 
+test('the locale selector follows the URL', async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto('/?lang=zh-CN');
+  await expect(page.locator('.status')).toHaveText('assembled');
+  await expect(page.locator('.locale')).toHaveValue('zh-CN');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'zh-CN');
+
+  // Switching rewrites the query so the choice survives a reload.
+  await page.selectOption('.locale', 'en');
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
+  await expect(page).toHaveURL(/[?&]lang=en(&|$)/);
+
+  expect(errors).toEqual([]);
+});
+
 test('typing does not move the cursor', async ({ page }) => {
   await assemble(page);
   const content = page.locator('.cm-content');
