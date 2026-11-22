@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "rvh-asm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-elf",
  "rvh-isa",
@@ -14,7 +14,7 @@ dependencies = [
 
 [[package]]
 name = "rvh-cli"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-asm",
  "rvh-dap",
@@ -29,11 +29,11 @@ dependencies = [
 
 [[package]]
 name = "rvh-content"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-dap"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-isa",
  "rvh-json",
@@ -45,19 +45,19 @@ dependencies = [
 
 [[package]]
 name = "rvh-elf"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-isa"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-json"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-lsp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-isa",
  "rvh-json",
@@ -68,11 +68,11 @@ dependencies = [
 
 [[package]]
 name = "rvh-rpc"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-sem"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-isa",
  "rvh-syntax",
@@ -80,7 +80,7 @@ dependencies = [
 
 [[package]]
 name = "rvh-session"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-asm",
  "rvh-content",
@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "rvh-sim"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-asm",
  "rvh-elf",
@@ -105,11 +105,11 @@ dependencies = [
 
 [[package]]
 name = "rvh-syntax"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "rvh-wasm"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "rvh-isa",
  "rvh-session",
@@ -117,4 +117,4 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.1.1"

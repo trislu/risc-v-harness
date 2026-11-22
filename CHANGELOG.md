@@ -6,6 +6,44 @@ One section per version, newest first. The format follows
 data format, the wasm ABI and the content format are stable for someone other than
 the author ([ADR-0013](docs/adr/0013-vendor-extensions.md)).
 
+## [0.1.1] - 2026-11-22
+
+A small release on top of the first one: the playground can share a link, the CLI
+prints assembly for a word, and the float JSON stops losing bits.
+
+### Added
+
+#### Playground
+
+- **Share** writes the program and the target into the URL fragment and copies the
+  link; opening it restores both, without a server
+  ([ADR-0020](docs/adr/0020-playground-state-lives-in-the-fragment.md)).
+- The target picker lists `rv32ic`, `rv32if` and `rv32id`; the core has carried
+  them since 0.1.0, but the picker had not.
+
+#### CLI
+
+- `rvh isa decode` prints the word as assembly — `0x00c58533  add a0, a1, a2` — for
+  compressed words too, instead of raw field numbers.
+
+### Changed
+
+- A floating-point register in the session JSON is a hex string, because 64 bits do
+  not fit a JSON number: `"old": "0x0000000000000000"`,
+  `"new": "0xffffffff3fc00000"`.
+
+### Fixed
+
+- The 0.1.0 limits said the C, F and D extensions and `.insn` were missing. They
+  shipped in 0.1.0; the list now names the real limits.
+
+### Documentation and tooling
+
+- The hover demo is a recording, used by both READMEs.
+- CI refuses a tag whose name does not match the manifest version.
+- `cargo xtask lsp-smoke` and `cargo xtask package-vsix` replace the shell scripts
+  for those chores.
+
 ## [0.1.0] - 2026-11-22
 
 First public version: one core behind three faces — a language server, a debug
