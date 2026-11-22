@@ -178,6 +178,7 @@ files.
 | 17 | DAP is the editor-facing boundary; the simulator is the first backend, hardware arrives via gdb or RSP | [0017](adr/0017-dap-is-the-backend-boundary.md) |
 | 18 | compressed instructions are formats in code, with `size` carried by the instruction | [0018](adr/0018-compressed-instructions-are-formats.md) |
 | 19 | XLEN is a parameter with named seams; a 64-bit base is M9, not a silent 32-bit run | [0019](adr/0019-xlen-is-a-parameter.md) |
+| 20 | the playground shares state through the URL fragment, with `t` and `s` | [0020](adr/0020-playground-state-lives-in-the-fragment.md) |
 
 Architecture detail, data contracts, testing strategy: [docs/architecture.md](architecture.md).
 The records themselves, with statuses and the rules for correcting one:

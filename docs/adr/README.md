@@ -27,6 +27,7 @@ superseded. That rule is what makes the directory useful a year later.
 | [0017](0017-dap-is-the-backend-boundary.md) | DAP is the boundary; the simulator is the first backend, real targets arrive through gdb or RSP | accepted |
 | [0018](0018-compressed-instructions-are-formats.md) | 16-bit instructions are nine more formats in code, not a bit-table data model | accepted |
 | [0019](0019-xlen-is-a-parameter.md) | XLEN is a parameter: named seams now, a 64-bit base later (M9) | accepted |
+| [0020](0020-playground-state-lives-in-the-fragment.md) | a shared playground state lives in the URL fragment (`#t=…&s=…`) | accepted |
 
 ## Rules
 

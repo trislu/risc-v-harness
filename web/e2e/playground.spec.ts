@@ -174,3 +174,28 @@ test('the page renders as a screenshot', async ({ page }) => {
   // Committed on purpose: it is the picture the README shows.
   await page.screenshot({ path: '../assets/playground.png', fullPage: true });
 });
+
+test('a share link restores the program and the target', async ({ page }) => {
+  const errors = collectErrors(page);
+  const source = 'li a0, 2\nmul a1, a0, a0\nebreak\n';
+  const encoded = Buffer.from(source, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+  await page.goto(`/#t=rv32im&s=${encoded}`);
+  await expect(page.locator('.status')).toHaveText('assembled');
+  await expect(page.locator('.target')).toHaveValue('rv32im');
+  await expect(page.locator('.cm-content')).toContainText('mul a1, a0, a0');
+  expect(errors).toEqual([]);
+});
+
+test('the share button puts the program in the address bar', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto('/');
+  await expect(page.locator('.status')).toHaveText('assembled');
+  await page.getByRole('button', { name: 'Share', exact: true }).click();
+  await expect(page.locator('.share-status')).toHaveText('link copied');
+  const url = page.url();
+  expect(url).toContain('#t=rv32i_zicsr&s=');
+});

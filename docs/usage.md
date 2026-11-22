@@ -239,7 +239,11 @@ pnpm dev         # http://localhost:5173
 
 The header carries a target picker: switching from `rv32i_zicsr` to `rv32im` turns
 a rejected `mul` into an accepted one, because the page starts a new session with
-the same source. The page is a demo, not a second IDE
+the same source. **Share** puts the program and the target in the URL fragment
+(`#t=rv32im&s=…`) and copies the link, so a reader opens the same view with no
+paste steps; the fragment never reaches the host
+([ADR-0020](adr/0020-playground-state-lives-in-the-fragment.md)). The page is a
+demo, not a second IDE
 ([ADR-0016](adr/0016-playground-is-a-demo-surface.md)): no breakpoints, no call
 stack, no course.
 

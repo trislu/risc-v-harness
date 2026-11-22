@@ -37,6 +37,7 @@
   let status = $state('loading engine…');
   let addressText = $state('0x100');
   let address = $state(0x100);
+  let shareStatus = $state('');
 
   const hex = (value: number) => `0x${(value >>> 0).toString(16).padStart(8, '0')}`;
   const asSigned = (value: number) => value | 0;
@@ -57,12 +58,21 @@
 
   onMount(async () => {
     document.documentElement.lang = locale;
+    const shared = readShare();
+    const initial = shared?.source ?? SAMPLE;
     try {
+      if (shared) {
+        target = shared.target;
+      }
       engine = await createEngine(target);
-      editor = createEditor(editorHost, SAMPLE, () => analyze());
+      editor = createEditor(editorHost, initial, () => analyze());
       analyze();
-    } catch (error) {
-      status = `engine failed: ${error}`;
+    } catch {
+      // A link may name a target this build does not have: fall back.
+      target = 'rv32i_zicsr';
+      engine = await createEngine(target);
+      editor = createEditor(editorHost, initial, () => analyze());
+      analyze();
     }
   });
 
@@ -87,6 +97,36 @@
   function readLocale(): Locale {
     const requested = new URLSearchParams(location.search).get('lang');
     return LOCALES.find((name) => name.toLowerCase() === requested?.toLowerCase()) ?? 'en';
+  }
+
+  /// The fragment carries a shared program: `#t=<target>&s=<base64url>`. The
+  /// source travels as UTF-8 bytes so non-ASCII comments survive.
+  function encodeSource(text: string): string {
+    let binary = '';
+    for (const byte of new TextEncoder().encode(text)) {
+      binary += String.fromCharCode(byte);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+
+  function decodeSource(text: string): string | null {
+    try {
+      const padded = text.replace(/-/g, '+').replace(/_/g, '/');
+      const binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, '='));
+      return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)));
+    } catch {
+      return null;
+    }
+  }
+
+  function readShare(): { source: string; target: string } | null {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const encoded = params.get('s');
+    if (!encoded) {
+      return null;
+    }
+    const source = decodeSource(encoded);
+    return source === null ? null : { source, target: params.get('t') ?? 'rv32i_zicsr' };
   }
 
   /// A new session starts in English, so every rebuild has to re-apply it.
@@ -124,6 +164,25 @@
     } catch (error) {
       status = `target rejected: ${error}`;
     }
+  }
+
+  /// Put the current program in the address bar and copy the link. The fragment
+  /// is the only carrier, so a shared link works without a server.
+  async function share() {
+    const params = new URLSearchParams();
+    params.set('t', target);
+    params.set('s', encodeSource(editor?.text() ?? SAMPLE));
+    const url = `${location.origin}${location.pathname}${location.search}#${params.toString()}`;
+    history.replaceState(null, '', url);
+    try {
+      await navigator.clipboard.writeText(url);
+      shareStatus = 'link copied';
+    } catch {
+      shareStatus = 'link is in the address bar';
+    }
+    setTimeout(() => {
+      shareStatus = '';
+    }, 2500);
   }
 
   function analyze() {
@@ -189,6 +248,9 @@
       <option value="rv32im" selected={target === 'rv32im'}>rv32im</option>
       <option value="rv32ia" selected={target === 'rv32ia'}>rv32ia</option>
       <option value="rv32e" selected={target === 'rv32e'}>rv32e</option>
+      <option value="rv32ic" selected={target === 'rv32ic'}>rv32ic</option>
+      <option value="rv32if" selected={target === 'rv32if'}>rv32if</option>
+      <option value="rv32id" selected={target === 'rv32id'}>rv32id</option>
     </select>
     <button onclick={analyze}>Assemble</button>
     <button onclick={() => step(1)} disabled={!machine}>Step</button>
@@ -196,6 +258,8 @@
     <button onclick={run} disabled={!machine}>Run</button>
     <button onclick={undo} disabled={!machine}>Back</button>
     <button onclick={reset} disabled={!machine}>Reset</button>
+    <button onclick={share} title="Copy a link that carries this program">Share</button>
+    <span class="share-status">{shareStatus}</span>
     <span class="status">{status}</span>
     <span class="halt">{halted}</span>
     <span class="steps">{machine ? `${machine.steps} step(s) at ${hex(machine.pc)}` : ''}</span>
@@ -364,8 +428,13 @@
 
   .status,
   .halt,
-  .steps {
+  .steps,
+  .share-status {
     color: #8b95a4;
+  }
+
+  .share-status {
+    min-width: 8rem;
   }
 
   main {
