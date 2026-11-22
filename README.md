@@ -20,7 +20,7 @@ declaration that makes it legal.
 
 The encoding table comes from `isa/*.toml`, not from a table written twice.
 
-![Hover on add showing format, extension, class and the operand table](assets/demos/hover.png)
+![The pointer moves to add, and the tooltip opens with the format, the extension, the class and the operand table](assets/demos/hover.gif)
 
 ### 3. Go to definition
 

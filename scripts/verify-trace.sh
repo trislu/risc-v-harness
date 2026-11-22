@@ -182,8 +182,8 @@ fixture atomics rv32ia rv32ia "$base
     lr.w t6, (t4)
     sc.w t6, t5, (t4)"
 
-# Spike traps an F instruction while mstatus.FS is Off; our simulator does not
-# model FS, so the fixture enables it for both.
+# Spike traps an F instruction while mstatus.FS is Off. We model FS too, so the
+# fixture enables it for both.
 fixture float rv32if rv32if "$base
     li t0, 0x2000
     csrw mstatus, t0

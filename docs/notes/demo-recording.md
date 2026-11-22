@@ -11,7 +11,7 @@ Assets live in `assets/`:
 | `assets/playground.png` | the page after one step | committed |
 | `assets/playground.gif` | typing, a diagnostic, a fix, a step | recorded by Playwright |
 | `assets/vscode-fix.gif` | a squiggle, the quick fix, the target picker | recorded over CDP |
-| `assets/demos/hover.png` | hover on an instruction | recorded over CDP |
+| `assets/demos/hover.gif` | the pointer reaches `add`, the tooltip opens | recorded over CDP |
 | `assets/demos/definition.gif` | F12 on a label | recorded over CDP |
 | `assets/demos/completion.gif` | typing `ad`, the list, the accepted line | recorded over CDP |
 | `assets/demos/target.gif` | command palette, then the picker | recorded over CDP |
@@ -78,7 +78,8 @@ node scripts/record-vscode.mjs      # the GIF story, into assets/frames/vscode-f
 python3 scripts/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif --fps 1
 
 node scripts/capture-vscode.mjs     # per-feature frames, into assets/frames/<story>/
-for story in definition completion target debug; do
+node scripts/capture-hover.mjs      # the hover sequence, into assets/frames/hover
+for story in hover definition completion target debug; do
   python3 scripts/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
 done
 ```
@@ -86,8 +87,11 @@ done
 A story that is a *sequence* becomes a GIF (definition, completion, target,
 debug); hover is a state, so it stays a still.
 
-`capture-vscode.mjs` runs the stories in README order: hover, definition,
-completion, target picker, debug. It needs the demo workspace to be a
+`capture-vscode.mjs` runs the stories in README order: definition, completion,
+target picker, debug. `capture-hover.mjs` records hover separately, because the
+pointer has to travel to the token; it draws the arrow itself, since a screenshot
+contains the page and not the host cursor, and the X cursor is parked out of the
+window for every frame. It needs the demo workspace to be a
 copy of `tests/corpus` with `"editor.autoIndent": "none"`; the launcher in this
 note writes it.
 

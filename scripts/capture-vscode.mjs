@@ -5,9 +5,9 @@
 //     python3 scripts/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
 //   done
 //
-// Every story that is a *sequence* becomes a GIF; hover is a state, so it stays a
-// still. The script rewrites each buffer from the file on disk, so a previous run
-// leaves nothing behind.
+// Each story here is a sequence and becomes a GIF; hover has its own script
+// (`capture-hover.mjs`), because it needs the pointer. The script rewrites each
+// buffer from the file on disk, so a previous run leaves nothing behind.
 import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync } from 'node:fs';
 
@@ -17,8 +17,6 @@ const { chromium } = require('@playwright/test');
 
 const PORT = process.env.RVH_CDP_PORT ?? '9356';
 const FRAMES = new URL('../assets/frames/', import.meta.url).pathname;
-const DEMOS = new URL('../assets/demos/', import.meta.url).pathname;
-mkdirSync(DEMOS, { recursive: true });
 
 const browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`);
 const page = browser.contexts().flatMap((c) => c.pages()).find((p) => p.url().includes('workbench'));
@@ -30,13 +28,6 @@ const shot = async (story, name) => {
   mkdirSync(`${FRAMES}${story}`, { recursive: true });
   await page.screenshot({ path: `${FRAMES}${story}/${name}.png` });
   console.log('shot', story, name);
-};
-
-const still = async (name) => {
-  await page.mouse.move(4, 4);
-  await page.waitForTimeout(900);
-  await page.screenshot({ path: `${DEMOS}${name}.png` });
-  console.log('shot', name);
 };
 
 const open = async (file, source) => {
@@ -77,16 +68,8 @@ await page.waitForTimeout(500);
 await page.keyboard.press('Enter');
 await page.waitForTimeout(500);
 
-// 1. Hover: a state, so one still. Line 9 is `add`.
-await open('001_loop_sum', '001_loop_sum.s');
-await goto_line(9);
-await page.keyboard.press('Home');
-await page.keyboard.press('Control+k');
-await page.keyboard.press('Control+i');
-await page.waitForTimeout(1200);
-await still('hover');
-await page.keyboard.press('Escape');
-await page.keyboard.press('Control+w');
+// 1. Hover lives in its own script: it is a sequence, and the pointer has to
+// travel, which `capture-hover.mjs` records.
 
 // 2. Go to definition: the jump is the story, so two frames.
 await open('002_factorial', '002_factorial.s');

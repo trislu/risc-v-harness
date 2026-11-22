@@ -55,8 +55,9 @@ adapter and a browser playground, all over one assembler and one simulator.
 #### Tooling
 
 - `cargo xtask codegen` and `cargo xtask clean`.
-- Differential checks: `verify-asm.sh` (65 checks), `verify-elf.sh`,
-  `lsp-smoke.sh`, `wasm-smoke.mjs`, `engine-smoke.mjs`, Playwright end-to-end.
+- Differential checks: `scripts/verify-asm.sh`, `scripts/verify-elf.sh`,
+  `scripts/verify-trace.sh` (with spike), `scripts/wasm-smoke.mjs`,
+  `scripts/engine-smoke.mjs`, `cargo xtask lsp-smoke`, Playwright end-to-end.
 - Corpus `000`–`008` as a reading order, plus `900`–`902` for broken input.
 
 #### Documentation

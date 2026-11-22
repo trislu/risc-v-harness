@@ -19,6 +19,10 @@ and memory on screen.
 
 ## In action
 
+Hovering an instruction explains its encoding and its operand ranges.
+
+![The pointer moves to add, and the tooltip opens with the format, the extension, the class and the operand table](https://raw.githubusercontent.com/trislu/risc-v-harness/master/assets/demos/hover.gif)
+
 A missing extension is a diagnostic, and the fix inserts the directive that
 enables it.
 
