@@ -26,12 +26,14 @@ jobs:
           - target: linux-arm64
             runner: ubuntu-24.04-arm
             triple: aarch64-unknown-linux-gnu
-          # Both Apple targets build on an arm64 runner; the SDK links either arch.
+          # One macOS runner builds both triples: the SDK links either
+          # architecture. `macos-14` is no longer an image — jobs on it are
+          # cancelled without ever being assigned a runner.
           - target: darwin-x64
-            runner: macos-14
+            runner: macos-latest
             triple: x86_64-apple-darwin
           - target: darwin-arm64
-            runner: macos-14
+            runner: macos-latest
             triple: aarch64-apple-darwin
           - target: win32-x64
             runner: windows-latest
