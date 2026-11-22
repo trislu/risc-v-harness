@@ -47,6 +47,7 @@ pub fn parse(source: &str) -> SyntaxTree {
         .collect();
 
     let mut parser = Parser {
+        src: source.to_owned(),
         tokens,
         pos: 0,
         diagnostics,
@@ -56,6 +57,7 @@ pub fn parse(source: &str) -> SyntaxTree {
 }
 
 struct Parser {
+    src: String,
     tokens: Vec<TreeToken>,
     pos: usize,
     diagnostics: Vec<Diagnostic>,
@@ -122,14 +124,22 @@ impl Parser {
                 }
                 Some(SyntaxKind::DirectiveName) => {
                     let mut directive = Node::new(SyntaxKind::Directive);
+                    let name = self
+                        .tokens
+                        .get(self.pos)
+                        .map(|token| &self.src[token.span.0..token.span.1])
+                        .unwrap_or("")
+                        .to_string();
                     self.bump(&mut directive);
-                    self.parse_args(&mut directive);
+                    // `.insn r 0x33, ...` separates the format letter from the first
+                    // operand with a space, as GNU `as` does.
+                    self.parse_args(&mut directive, name == ".insn");
                     line.push_child(directive);
                 }
                 Some(SyntaxKind::Ident) => {
                     let mut instruction = Node::new(SyntaxKind::Instruction);
                     self.bump(&mut instruction);
-                    self.parse_args(&mut instruction);
+                    self.parse_args(&mut instruction, false);
                     line.push_child(instruction);
                 }
                 Some(_) => {
@@ -167,8 +177,10 @@ impl Parser {
     ///
     /// The first argument needs no leading comma. Later arguments do, and a
     /// missing one is reported but recovered from.
-    fn parse_args(&mut self, parent: &mut Node) {
+    fn parse_args(&mut self, parent: &mut Node, allow_first_gap: bool) {
         let mut have_arg = false;
+        let mut args_seen = 0usize;
+        let mut gap_allowed = allow_first_gap;
         let mut expect_arg = false;
         let mut last_comma = (0, 0);
 
@@ -197,16 +209,22 @@ impl Parser {
                 }
                 Some(_) => {
                     if have_arg && !expect_arg {
-                        self.diagnostics.push(Diagnostic::new(
-                            "syntax.expected-comma",
-                            "expected `,` between arguments",
-                            self.span(),
-                        ));
+                        if gap_allowed && args_seen == 1 {
+                            // The format letter of `.insn`, then its first operand.
+                            gap_allowed = false;
+                        } else {
+                            self.diagnostics.push(Diagnostic::new(
+                                "syntax.expected-comma",
+                                "expected `,` between arguments",
+                                self.span(),
+                            ));
+                        }
                     }
                     let mut operand = Node::new(SyntaxKind::Operand);
                     self.parse_arg_into(&mut operand);
                     parent.push_child(operand);
                     have_arg = true;
+                    args_seen += 1;
                     expect_arg = false;
                 }
             }

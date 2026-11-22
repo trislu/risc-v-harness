@@ -116,6 +116,11 @@ pub enum Stmt {
         ops: Vec<Op>,
         span: (usize, usize),
     },
+    /// `.insn ...`: a word emitted exactly as written, with no ISA knowledge.
+    Raw {
+        word: u32,
+        span: (usize, usize),
+    },
     /// `la rd, sym`: two words, encoded together so the pair shares one base PC.
     La {
         rd: u8,
@@ -145,6 +150,7 @@ impl Stmt {
             | Self::Insn { span, .. }
             | Self::La { span, .. }
             | Self::Data { span, .. }
+            | Self::Raw { span, .. }
             | Self::Align { span, .. }
             | Self::Zero { span, .. } => *span,
         }
@@ -729,6 +735,132 @@ impl<'a> Ctx<'a> {
     /// `.option arch, +m`, `.option arch, -m`, `.option arch, rv32im`.
     ///
     /// Applies from this line on, which is what GNU `as` does.
+    /// `.insn <format> <operands...>`: emit a word the assembler does not model.
+    ///
+    /// The forms follow GNU `as`: `r` and `i` and `b` take registers then an
+    /// immediate; `s` takes the stored register and a `imm(rs1)` address; `u` and
+    /// `j` take a register and an immediate.
+    fn raw_insn(&mut self, args: &[&str], span: (usize, usize)) {
+        let Some((format, rest)) = args.split_first() else {
+            self.bad_raw("`.insn` needs a format (r, i, s, b, u, j)", span);
+            return;
+        };
+        let format = format.trim();
+        let mut fields: Vec<u32> = Vec::new();
+        let mut memory: Option<(u32, u32)> = None;
+        for (index, text) in rest.iter().enumerate() {
+            let text = text.trim();
+            if let Some(register) = parse_register(text) {
+                fields.push(u32::from(register));
+                continue;
+            }
+            if let Some(open) = text.find('(') {
+                if text.ends_with(')') {
+                    let offset =
+                        parse_int(&text[..open]).and_then(|value| u32::try_from(value).ok());
+                    let base = parse_register(&text[open + 1..text.len() - 1]);
+                    match (offset, base) {
+                        (Some(offset), Some(base)) => {
+                            memory = Some((offset, u32::from(base)));
+                            continue;
+                        }
+                        _ => {
+                            self.bad_raw(&format!("`{text}` is not an address like 8(a2)"), span);
+                            return;
+                        }
+                    }
+                }
+            }
+            match parse_int(text).and_then(|value| u32::try_from(value).ok()) {
+                Some(value) => fields.push(value),
+                None => {
+                    self.bad_raw(&format!("`{text}` is not a number"), span);
+                    return;
+                }
+            }
+            let _ = index;
+        }
+
+        let need = |count: usize| fields.len() == count && memory.is_none();
+        let word = match format {
+            "r" if need(6) => {
+                let [opcode, funct3, funct7, rd, rs1, rs2] = fields[..] else {
+                    unreachable!()
+                };
+                opcode | (funct3 << 12) | (funct7 << 25) | (rd << 7) | (rs1 << 15) | (rs2 << 20)
+            }
+            "i" if need(5) => {
+                let [opcode, funct3, rd, rs1, imm] = fields[..] else {
+                    unreachable!()
+                };
+                opcode | (funct3 << 12) | (rd << 7) | (rs1 << 15) | ((imm & 0xfff) << 20)
+            }
+            "s" if fields.len() == 3 => {
+                let Some((offset, base)) = memory else {
+                    self.bad_raw("`.insn s` needs an address like `8(a2)`", span);
+                    return;
+                };
+                let (opcode, funct3, rs2) = (fields[0], fields[1], fields[2]);
+                opcode
+                    | (funct3 << 12)
+                    | (rs2 << 20)
+                    | (base << 15)
+                    | ((offset & 0x1f) << 7)
+                    | (((offset >> 5) & 0x7f) << 25)
+            }
+            "b" if need(5) => {
+                let [opcode, funct3, rs1, rs2, imm] = fields[..] else {
+                    unreachable!()
+                };
+                opcode
+                    | (funct3 << 12)
+                    | (rs1 << 15)
+                    | (rs2 << 20)
+                    | (((imm >> 12) & 1) << 31)
+                    | (((imm >> 5) & 0x3f) << 25)
+                    | (((imm >> 1) & 0xf) << 8)
+                    | (((imm >> 11) & 1) << 7)
+            }
+            "u" if need(3) => {
+                let [opcode, rd, imm] = fields[..] else {
+                    unreachable!()
+                };
+                opcode | (rd << 7) | ((imm & 0xfffff) << 12)
+            }
+            "j" if need(3) => {
+                let [opcode, rd, imm] = fields[..] else {
+                    unreachable!()
+                };
+                opcode
+                    | (rd << 7)
+                    | (((imm >> 20) & 1) << 31)
+                    | (((imm >> 1) & 0x3ff) << 21)
+                    | (((imm >> 11) & 1) << 20)
+                    | (((imm >> 12) & 0xff) << 12)
+            }
+            "r" | "i" | "b" | "u" | "j" | "s" => {
+                self.bad_raw(
+                    &format!("`.insn {format}` takes a different number of operands"),
+                    span,
+                );
+                return;
+            }
+            other => {
+                self.bad_raw(
+                    &format!("`.insn {other}` is not a format; use r, i, s, b, u or j"),
+                    span,
+                );
+                return;
+            }
+        };
+        self.push(Stmt::Raw { word, span });
+    }
+
+    fn bad_raw(&mut self, message: &str, span: (usize, usize)) {
+        self.diagnostics
+            .push(Diagnostic::new("sem.raw-insn", message, span));
+    }
+
     fn option(&mut self, args: &[&str], span: (usize, usize)) {
         if args.first().map(|name| name.trim()) != Some("arch") {
             return;
@@ -853,6 +985,7 @@ impl<'a> Ctx<'a> {
             }
             ".attribute" => self.attribute(&args, head),
             ".option" => self.option(&args, head),
+            ".insn" => self.raw_insn(&args, head),
             ".align" | ".p2align" | ".balign" => {
                 let power = args.first().and_then(|text| parse_int(text)).unwrap_or(0);
                 if (0..=16).contains(&power) {
@@ -1921,6 +2054,51 @@ mod arch_tests {
                 .diagnostics
                 .iter()
                 .any(|diagnostic| diagnostic.code == "sem.bad-target"),
+            "{:?}",
+            program.diagnostics
+        );
+    }
+}
+
+#[cfg(test)]
+mod raw_insn_tests {
+    use super::*;
+
+    fn assemble(source: &str) -> Program {
+        let tree = rvh_syntax::parse(source);
+        resolve(&tree, &Target::parse("rv32i_zicsr").expect("target"))
+    }
+
+    fn word(source: &str) -> u32 {
+        let program = assemble(source);
+        assert!(program.diagnostics.is_empty(), "{:?}", program.diagnostics);
+        match &program.sections[0].stmts[0] {
+            Stmt::Raw { word, .. } => *word,
+            other => panic!("expected a raw word, found {other:?}"),
+        }
+    }
+
+    #[test]
+    fn the_six_forms_encode_the_words_gnu_produces() {
+        // The four compared with GNU in verify-asm.sh.
+        assert_eq!(word(".insn r 0x33, 0x0, 0x00, a0, a1, a2\n"), 0x00c5_8533);
+        assert_eq!(word(".insn i 0x13, 0x0, a0, a1, 42\n"), 0x02a5_8513);
+        assert_eq!(word(".insn s 0x23, 0x2, a1, 8(a2)\n"), 0x00b6_2423);
+        assert_eq!(word(".insn u 0x37, a0, 0x12345\n"), 0x1234_5537);
+        // These two follow the specification; see docs/notes/dialect-matrix.md
+        // for how GNU differs.
+        assert_eq!(word(".insn b 0x63, 0x0, a1, a2, 8\n"), 0x00c5_8463);
+        assert_eq!(word(".insn j 0x6f, a0, 8\n"), 0x0080_056f);
+    }
+
+    #[test]
+    fn a_bad_form_is_a_diagnostic() {
+        let program = assemble(".insn q 0x33, 0x0\n");
+        assert!(
+            program
+                .diagnostics
+                .iter()
+                .any(|diagnostic| diagnostic.code == "sem.raw-insn"),
             "{:?}",
             program.diagnostics
         );

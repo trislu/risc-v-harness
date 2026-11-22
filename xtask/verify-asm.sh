@@ -192,5 +192,29 @@ else
     fail=$((fail + 1))
 fi
 
+# `.insn`: raw encodings. Only the r, i, s and u forms are compared: GNU `as`
+# flips bit 0 of the `b` form's funct3 and ignores the `j` form's offset (see the
+# dialect note), so those two are checked by unit tests instead.
+cat >"$work/raw.s" <<'EOF'
+    .text
+    .globl _start
+_start:
+    .insn r 0x33, 0x0, 0x00, a0, a1, a2
+    .insn i 0x13, 0x0, a0, a1, 42
+    .insn s 0x23, 0x2, a1, 8(a2)
+    .insn u 0x37, a0, 0x12345
+    ebreak
+EOF
+riscv64-linux-gnu-as -march=rv32i -mabi=ilp32 -o "$work/raw.o" "$work/raw.s"
+riscv64-linux-gnu-ld -m elf32lriscv -Ttext=0 --no-relax -o "$work/raw.elf" "$work/raw.o"
+riscv64-linux-gnu-objcopy -O binary -j .text "$work/raw.elf" "$work/raw.gnu.bin"
+"$rvh" asm "$work/raw.s" --text "$work/raw.ours.bin" >/dev/null
+if cmp -s "$work/raw.gnu.bin" "$work/raw.ours.bin"; then
+    pass=$((pass + 1))
+else
+    echo "BYTES-DIFF .insn: our .text differs from GNU as + ld"
+    fail=$((fail + 1))
+fi
+
 echo "verify-asm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

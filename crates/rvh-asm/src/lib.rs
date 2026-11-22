@@ -154,6 +154,10 @@ pub fn assemble(program: &Program) -> (Image, Vec<Diagnostic>) {
                     data.extend_from_slice(bytes);
                     addr += bytes.len() as u32;
                 }
+                Stmt::Raw { word, .. } => {
+                    data.extend_from_slice(&word.to_le_bytes());
+                    addr += 4;
+                }
                 Stmt::Insn { insn, ops, span } => {
                     let result = if insn.size == 2 {
                         encode_compressed_fields(insn, ops, addr, &labels)
@@ -244,6 +248,7 @@ fn size_of(stmt: &Stmt, addr: u32) -> u32 {
     match stmt {
         Stmt::Label { .. } => 0,
         Stmt::Insn { insn, .. } => u32::from(insn.size),
+        Stmt::Raw { .. } => 4,
         Stmt::La { .. } => 8,
         Stmt::Data { bytes, .. } => bytes.len() as u32,
         Stmt::Align { power, .. } => padding(addr, *power) as u32,

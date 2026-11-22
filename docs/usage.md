@@ -23,6 +23,11 @@ rvh dap                              # DAP on stdin/stdout
 `rv32e`, ...), and a file overrides it with `.attribute arch` or `.option arch`
 ([ADR-0014](adr/0014-target-precedence.md)).
 
+`.insn <format> ...` emits a word the assembler does not model: `r`, `i`, `s`, `b`,
+`u` and `j`, with the operand order GNU `as` uses. It is the escape hatch for a
+vendor instruction whose encoding is known but whose semantics are not; the
+simulator runs it only when the word happens to decode as an instruction it knows.
+
 `--target rv32ic` assembles and runs the 26 RV32C instructions: the simulator reads
 two bytes first, decodes a compressed word when the low bits are not `11`, and
 steps by two (ADR-0018). `009_compressed.s` declares the extension with

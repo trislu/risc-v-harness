@@ -110,3 +110,15 @@ immediates becomes `c.addi`. `rvh` only emits a compressed word for an explicit
 `verify-asm.sh` therefore compares the explicit `c.*` forms against GNU, byte for
 byte, and ends its fixture with a four-byte instruction that GNU does not
 compress.
+
+## `.insn`
+
+`.insn r`, `i`, `s` and `u` agree with GNU `as` byte for byte. Two forms do not,
+and `rvh` follows the specification instead:
+
+- `.insn b 0x63, <funct3>, rs1, rs2, imm` — GNU flips bit 0 of `funct3` (asking for
+  `0` produces `bne`, asking for `1` produces `beq`);
+- `.insn j 0x6f, rd, <offset>` — GNU ignores the offset and encodes zero.
+
+`.insn s` takes the stored register and an address, as in
+`.insn s 0x23, 0x2, a1, 8(a2)`.
