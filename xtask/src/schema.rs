@@ -12,7 +12,9 @@ pub const FIELDS: &[&str] = &[
     "id", "mnemonic", "ext", "format", "opcode", "funct3", "funct7", "imm12", "class", "operands",
 ];
 
-const FORMATS: &[&str] = &["R", "I", "S", "B", "U", "J"];
+const FORMATS: &[&str] = &[
+    "R", "I", "S", "B", "U", "J", "CI", "CR", "CSS", "CIW", "CL", "CS", "CA", "CB", "CJ",
+];
 
 #[derive(Debug)]
 pub struct Error {

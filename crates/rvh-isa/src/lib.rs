@@ -21,9 +21,61 @@ pub enum Format {
     B,
     U,
     J,
+    /// Compressed formats (ADR-0018). Scrambled fields live in the encoder and the
+    /// decoder, like the six formats above.
+    Ci,
+    Cr,
+    Css,
+    Ciw,
+    Cl,
+    Cs,
+    Ca,
+    Cb,
+    Cj,
 }
 
 impl Format {
+    /// Width in bytes of an instruction in this format.
+    #[must_use]
+    pub fn size(self) -> u8 {
+        match self {
+            Self::R | Self::I | Self::S | Self::B | Self::U | Self::J => 4,
+            Self::Ci
+            | Self::Cr
+            | Self::Css
+            | Self::Ciw
+            | Self::Cl
+            | Self::Cs
+            | Self::Ca
+            | Self::Cb
+            | Self::Cj => 2,
+        }
+    }
+
+    /// Parse the name used in `isa/*.toml`.
+    #[must_use]
+    pub fn from_name(name: &str) -> Option<Self> {
+        Some(match name {
+            "R" => Self::R,
+            "I" => Self::I,
+            "S" => Self::S,
+            "B" => Self::B,
+            "U" => Self::U,
+            "J" => Self::J,
+            "CI" => Self::Ci,
+            "CR" => Self::Cr,
+            "CSS" => Self::Css,
+            "CIW" => Self::Ciw,
+            "CL" => Self::Cl,
+            "CS" => Self::Cs,
+            "CA" => Self::Ca,
+            "CB" => Self::Cb,
+            "CJ" => Self::Cj,
+            _ => return None,
+        })
+    }
+
+    /// The name used in `isa/*.toml` and in `rvh isa lookup` output.
     #[must_use]
     pub fn as_str(self) -> &'static str {
         match self {
@@ -33,9 +85,20 @@ impl Format {
             Self::B => "B",
             Self::U => "U",
             Self::J => "J",
+            Self::Ci => "CI",
+            Self::Cr => "CR",
+            Self::Css => "CSS",
+            Self::Ciw => "CIW",
+            Self::Cl => "CL",
+            Self::Cs => "CS",
+            Self::Ca => "CA",
+            Self::Cb => "CB",
+            Self::Cj => "CJ",
         }
     }
+}
 
+impl Format {
     /// Bit fields of the format, most significant first, as `(name, hi, lo)`.
     ///
     /// The names follow the instruction set manual. `imm` appears more than once
@@ -77,6 +140,61 @@ impl Format {
             ],
             Self::U => &[("imm", 31, 12), ("rd", 11, 7), ("opcode", 6, 0)],
             Self::J => &[("imm", 31, 12), ("rd", 11, 7), ("opcode", 6, 0)],
+            Self::Ci => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 2),
+                ("rd", 11, 7),
+                ("opcode", 1, 0),
+            ],
+            Self::Cr => &[
+                ("rd", 11, 7),
+                ("rs2", 6, 2),
+                ("funct2", 6, 5),
+                ("opcode", 1, 0),
+            ],
+            Self::Css => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 7),
+                ("rs2", 6, 2),
+                ("opcode", 1, 0),
+            ],
+            Self::Ciw => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 5),
+                ("rd", 4, 2),
+                ("opcode", 1, 0),
+            ],
+            Self::Cl => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 10),
+                ("rs1", 9, 7),
+                ("imm2", 6, 5),
+                ("rd", 4, 2),
+                ("opcode", 1, 0),
+            ],
+            Self::Cs => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 10),
+                ("rs1", 9, 7),
+                ("imm2", 6, 5),
+                ("rs2", 4, 2),
+                ("opcode", 1, 0),
+            ],
+            Self::Ca => &[
+                ("rd", 9, 7),
+                ("funct2", 15, 10),
+                ("rs2", 4, 2),
+                ("funct2b", 6, 5),
+                ("opcode", 1, 0),
+            ],
+            Self::Cb => &[
+                ("funct3", 15, 13),
+                ("imm", 12, 10),
+                ("rs1", 9, 7),
+                ("imm2", 6, 2),
+                ("opcode", 1, 0),
+            ],
+            Self::Cj => &[("funct3", 15, 13), ("imm", 12, 2), ("opcode", 1, 0)],
         }
     }
 }
@@ -150,6 +268,8 @@ pub struct Insn {
     pub mnemonic: &'static str,
     pub ext: &'static str,
     pub format: Format,
+    /// Instruction width in bytes: 4, or 2 for a compressed format.
+    pub size: u8,
     /// The 7-bit opcode field.
     pub opcode: u8,
     pub funct3: Option<u8>,
@@ -165,8 +285,9 @@ impl Insn {
     /// `(bits, mask)` of the fields that are constant for this instruction.
     #[must_use]
     pub fn fixed(&self) -> (u32, u32) {
+        // A compressed instruction's opcode field is its two-bit quadrant.
         let mut bits = u32::from(self.opcode);
-        let mut mask = 0x7f;
+        let mut mask = if self.size == 2 { 0x3 } else { 0x7f };
         if let Some(funct3) = self.funct3 {
             bits |= u32::from(funct3) << 12;
             mask |= 0x7 << 12;
@@ -187,6 +308,12 @@ impl Insn {
     pub fn matches(&self, word: u32) -> bool {
         let (bits, mask) = self.fixed();
         word & mask == bits
+    }
+
+    /// True when the low bits of `halfword` select a compressed instruction.
+    #[must_use]
+    pub fn is_compressed(halfword: u32) -> bool {
+        halfword & 0x3 != 0x3
     }
 
     /// Content key for a documentation field, e.g. `insn.addi.summary`.

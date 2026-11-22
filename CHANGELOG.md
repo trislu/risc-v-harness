@@ -74,6 +74,16 @@ adapter and a browser playground, all over one assembler and one simulator.
   at `0x3ff0`). `rvh run --board <name>` selects one, the ELF loader checks each
   segment against it, and an unknown name lists the presets.
 
+#### Groundwork
+
+- [ADR-0018](docs/adr/0018-compressed-instructions-are-formats.md): RV32C
+  instructions are nine more encoding formats in code, not a bit-table data
+  model. `Format` carries `size()`, an instruction carries `size`, and the fixed
+  fields of a compressed instruction use its two-bit quadrant as the opcode. The
+  encoder, the decoder and the simulator still have to learn the nine formats;
+  until they do, encoding a `C` format returns a stated error rather than a wrong
+  word.
+
 ### Limits
 
 - The C, F and D extensions are not implemented; `rv64i` and `rv64e` are named but

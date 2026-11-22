@@ -25,6 +25,7 @@ superseded. That rule is what makes the directory useful a year later.
 | [0015](0015-rv32e-is-a-register-limit.md) | `rv32e` is a register limit over the `i` table, not a second instruction set | accepted |
 | [0016](0016-playground-is-a-demo-surface.md) | The playground is a zero-install demo with a target picker, not a second IDE | accepted |
 | [0017](0017-dap-is-the-backend-boundary.md) | DAP is the boundary; the simulator is the first backend, real targets arrive through gdb or RSP | accepted |
+| [0018](0018-compressed-instructions-are-formats.md) | 16-bit instructions are nine more formats in code, not a bit-table data model | accepted |
 
 ## Rules
 

@@ -175,6 +175,7 @@ files.
 | 14 | a document's target is decided by the file, then a pin, then the setting | [0014](adr/0014-target-precedence.md) |
 | 16 | the playground is a zero-install demo surface with a target picker; breakpoints stay in the editor | [0016](adr/0016-playground-is-a-demo-surface.md) |
 | 17 | DAP is the editor-facing boundary; the simulator is the first backend, hardware arrives via gdb or RSP | [0017](adr/0017-dap-is-the-backend-boundary.md) |
+| 18 | compressed instructions are formats in code, with `size` carried by the instruction | [0018](adr/0018-compressed-instructions-are-formats.md) |
 
 Architecture detail, data contracts, testing strategy: [docs/architecture.md](architecture.md).
 The records themselves, with statuses and the rules for correcting one:

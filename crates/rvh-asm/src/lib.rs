@@ -362,6 +362,19 @@ fn encode_insn(
             word |= ((value >> 11) & 1) << 20;
             word |= ((value >> 12) & 0xff) << 12;
         }
+        // The nine compressed formats share nothing with the six above; they are
+        // encoded by their own function (ADR-0018, next step).
+        Format::Ci
+        | Format::Cr
+        | Format::Css
+        | Format::Ciw
+        | Format::Cl
+        | Format::Cs
+        | Format::Ca
+        | Format::Cb
+        | Format::Cj => {
+            return Err("compressed instruction encoding is not implemented yet".to_string());
+        }
     }
     Ok(word)
 }

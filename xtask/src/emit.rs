@@ -27,6 +27,8 @@ fn render_insn(out: &mut String, insn: &Insn) {
         "        format: Format::{},\n",
         format_variant(&insn.format)
     ));
+    let size = if insn.format.starts_with('C') { 2 } else { 4 };
+    out.push_str(&format!("        size: {size},\n"));
     out.push_str(&format!("        opcode: 0b{:07b},\n", insn.opcode));
     out.push_str(&format!("        funct3: {},\n", opt_bits(insn.funct3, 3)));
     out.push_str(&format!("        funct7: {},\n", opt_bits(insn.funct7, 7)));
@@ -65,6 +67,15 @@ fn format_variant(format: &str) -> &'static str {
         "B" => "B",
         "U" => "U",
         "J" => "J",
+        "CI" => "Ci",
+        "CR" => "Cr",
+        "CSS" => "Css",
+        "CIW" => "Ciw",
+        "CL" => "Cl",
+        "CS" => "Cs",
+        "CA" => "Ca",
+        "CB" => "Cb",
+        "CJ" => "Cj",
         other => unreachable!("schema rejected format `{other}`"),
     }
 }
