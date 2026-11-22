@@ -107,13 +107,19 @@ adapter and a browser playground, all over one assembler and one simulator.
   set `RVH_SPIKE`, and it skips when spike is absent.
 - Writes are now recorded even when the value does not change, so a trace shows
   what an instruction wrote rather than what it altered; undo is unaffected.
-- The comparison found two real bugs and one gap. `fcvt.d.w` and `fcvt.d.wu`
-  took the single-precision path, because the check was "does the mnemonic end in
-  `.d`" and `fcvt.d.w` ends in `.w`; the destination now decides. Spike traps an
-  F instruction while `mstatus.FS` is Off, and `rvh` does not model `FS`.
+- The comparison found a real bug: `fcvt.d.w` and `fcvt.d.wu` took the
+  single-precision path, because the check was "does the mnemonic end in `.d`" and
+  `fcvt.d.w` ends in `.w`; the destination now decides.
 - The double fixture also confirms NaN-boxing from the other side: `fcvt.d.s` of a
   register that holds a double is not a boxed single, so both simulators produce
   the canonical NaN.
+
+#### Floating-point state
+
+- `mstatus.FS` is modelled: an F or D instruction, or an access to `fflags`, `frm`
+  or `fcsr`, traps as illegal while `FS` is off, and using the state sets it to
+  dirty. The corpus examples enable it first, as a program must.
+- Spike does the same, which is how the trace comparison found the gap.
 
 #### Boards
 

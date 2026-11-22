@@ -91,6 +91,16 @@ const FLAG_NX: u32 = 1 << 0;
 const FLAG_DZ: u32 = 1 << 3;
 const FLAG_NV: u32 = 1 << 4;
 
+/// `mstatus.FS` (bits 14:13): 0 Off, 1 Initial, 2 Clean, 3 Dirty.
+const FS_MASK: u32 = 0x6000;
+const FS_DIRTY: u32 = 0x6000;
+const MSTATUS: u32 = 0x300;
+
+/// True for the floating-point instructions, which `fence` is not.
+fn is_float(mnemonic: &str) -> bool {
+    mnemonic.starts_with('f') && !mnemonic.starts_with("fence")
+}
+
 /// The memory width an instruction writes, in bytes; zero for anything else.
 fn store_width(mnemonic: &str) -> Option<u32> {
     let width = match mnemonic {
@@ -722,6 +732,16 @@ impl Machine {
         Rounding::from_bits(mode)
     }
 
+    /// Trap unless `mstatus.FS` is on, and mark the state dirty.
+    fn require_float_state(&mut self, pc: u32, word: u32) -> Result<(), HaltReason> {
+        let status = self.csr_read(MSTATUS);
+        if status & FS_MASK == 0 {
+            return Err(HaltReason::Illegal { pc, word });
+        }
+        self.csr_write(MSTATUS, status | FS_DIRTY);
+        Ok(())
+    }
+
     fn set_flag(&mut self, flag: u32) {
         self.fcsr |= flag & 0x1f;
     }
@@ -851,6 +871,13 @@ impl Machine {
         let imm_i = imm_i(word);
         let csr = (word >> 20) & 0xfff;
         let funct3 = (word >> 12) & 0x7;
+
+        // Floating-point state is unavailable while `mstatus.FS` is Off, and
+        // using it makes the state dirty.
+        let float_csr = matches!(csr, 0x001..=0x003);
+        if is_float(insn.mnemonic) || (float_csr && insn.mnemonic.starts_with("csr")) {
+            self.require_float_state(pc, word)?;
+        }
         let zimm = (word >> 15) & 0x1f;
 
         match insn.mnemonic {
@@ -1837,6 +1864,8 @@ mod float_tests {
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         let mut machine = Machine::new();
         machine.load(&image);
+        // FS = Initial, as a program must set before touching FP state.
+        machine.csr_write(MSTATUS, 0x2000);
         machine.run(100);
         machine
     }
@@ -1909,6 +1938,7 @@ mod fcsr_tests {
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         let mut machine = Machine::new();
         machine.load(&image);
+        machine.csr_write(MSTATUS, 0x2000);
         machine.run(100);
         machine
     }
@@ -2010,6 +2040,7 @@ mod trace_tests {
         assert!(diagnostics.is_empty(), "{diagnostics:?}");
         let mut machine = Machine::new();
         machine.load(&image);
+        machine.csr_write(MSTATUS, 0x2000);
         machine
     }
 
@@ -2027,6 +2058,30 @@ mod trace_tests {
         machine.step();
         let store = machine.describe_step(machine.trace().last().expect("step"));
         assert_eq!(store, "0x00000008 0x0062a023 mem[0x00000100]=0x00000041");
+    }
+
+    #[test]
+    fn floating_point_traps_while_fs_is_off() {
+        let mut machine = machine_with("rv32if", "fmv.w.x f0, zero\n");
+        machine.csr_write(MSTATUS, 0);
+        machine.step();
+        assert!(matches!(machine.halt(), Some(HaltReason::Illegal { .. })));
+    }
+
+    #[test]
+    fn using_float_state_makes_it_dirty() {
+        let mut machine = machine_with("rv32if", "fmv.w.x f0, zero\n");
+        machine.csr_write(MSTATUS, 0x2000);
+        machine.step();
+        assert_eq!(machine.csr_read(MSTATUS) & FS_MASK, FS_DIRTY);
+    }
+
+    #[test]
+    fn the_float_csrs_need_fs_too() {
+        let mut machine = machine_with("rv32if", "csrr a0, fflags\n");
+        machine.csr_write(MSTATUS, 0);
+        machine.step();
+        assert!(matches!(machine.halt(), Some(HaltReason::Illegal { .. })));
     }
 
     #[test]

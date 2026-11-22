@@ -34,6 +34,15 @@ fused forms with `fmt` 1. The floating-point registers are 64 bits wide, so a
 double fills one; a single is stored NaN-boxed in the low half (ADR-0019), which
 is also the shape RV64 will use.
 
+Floating-point state is off until a program sets `mstatus.FS`; an F or D
+instruction with `FS` off traps as illegal, and using the state makes it dirty, as
+on hardware:
+
+```asm
+    li t0, 0x2000
+    csrw mstatus, t0
+```
+
 `--target rv32if` assembles and runs all 25 RV32F instructions: loads and stores,
 the four arithmetic operations, the fused multiply-add family, `fsgnj`/`fsgnjn`/
 `fsgnjx`, `fmin`/`fmax`, the three comparisons, `fclass`, the four conversions,

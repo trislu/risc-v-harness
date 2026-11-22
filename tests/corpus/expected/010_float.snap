@@ -40,6 +40,34 @@ SourceFile
     NL "\n"
   Line
     WS "    "
+    Comment "# Floating-point state is off until a program enables it in mstatus.FS."
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "0x2000"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "csrw"
+      WS " "
+      Op
+        Ident "mstatus"
+      Comma ","
+      WS " "
+      Op
+        Ident "t0"
+    NL "\n"
+  Line
+    WS "    "
     Insn
       Ident "li"
       WS " "

@@ -5,6 +5,9 @@
     .text
     .globl _start
 _start:
+    # Floating-point state is off until a program enables it in mstatus.FS.
+    li t0, 0x2000
+    csrw mstatus, t0
     li t0, 0x3fc00000        # 1.5
     fmv.w.x f0, t0
     li t1, 0x40100000        # 2.25

@@ -53,8 +53,8 @@ preset), end with a `tohost`
 write that stops spike, and avoid the console. Two things the comparison taught
 us and the fixtures now carry:
 
-- spike traps a floating-point instruction while `mstatus.FS` is Off, so the
-  float fixture enables it first; `rvh` does not model `FS` yet.
+- spike traps a floating-point instruction while `mstatus.FS` is Off; `rvh` models
+  `FS` too, so the fixtures enable it with `csrw mstatus` and both agree.
 - spike logs a memory read as `mem <addr>` with no value, and needs both
   `tohost` and `fromhost` symbols before it will stop.
 
