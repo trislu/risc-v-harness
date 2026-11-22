@@ -103,6 +103,11 @@ jobs:
           node-version: 22
 
       # --oidc and variadic --packagePath need vsce 4.1 or newer.
+      #
+      # Azure DevOps, which serves the Marketplace, answers with an HTML error
+      # page often enough that one attempt is not a release. The batch is
+      # idempotent — `--skip-duplicate` skips packages already published — so a
+      # retry resumes where the previous attempt stopped.
       - name: Publish
         run: |
           shopt -s nullglob
@@ -111,6 +116,13 @@ jobs:
             echo "no VSIX to publish" >&2
             exit 1
           fi
-          echo "publishing ${#packages[@]} package(s) as $GITHUB_REF_NAME"
-          npx --yes @vscode/vsce@latest publish \
-            --oidc --skip-duplicate --packagePath "${packages[@]}"
+          for attempt in 1 2 3; do
+            echo "attempt $attempt: publishing ${#packages[@]} package(s) as $GITHUB_REF_NAME"
+            if npx --yes @vscode/vsce@latest publish \
+                 --oidc --skip-duplicate --packagePath "${packages[@]}"; then
+              exit 0
+            fi
+            echo "attempt $attempt failed; retrying in 30s" >&2
+            sleep 30
+          done
+          exit 1
