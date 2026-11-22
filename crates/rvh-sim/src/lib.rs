@@ -545,6 +545,57 @@ impl Machine {
         (offset < self.ram.len()).then_some(offset)
     }
 
+    /// One byte of memory, for views that render a step (traces, debuggers).
+    #[must_use]
+    pub fn byte_at(&self, addr: u32) -> Option<u8> {
+        self.read_byte(addr)
+    }
+
+    /// One step as a single line: `<pc> <word> [<write>...]`.
+    ///
+    /// The format is an interface: `xtask/verify-trace.sh` compares it with
+    /// spike's commit log, so changing it means changing that script too.
+    #[must_use]
+    pub fn describe_step(&self, step: &Step) -> String {
+        let mut line = format!("0x{:08x} 0x{:08x}", step.pc, step.word);
+        let mut index = 0;
+        while index < step.changes.len() {
+            match step.changes[index] {
+                Change::Reg { index: reg, .. } => {
+                    line.push_str(&format!(" x{reg}=0x{:08x}", self.reg(usize::from(reg))));
+                    index += 1;
+                }
+                Change::FReg { index: reg, .. } => {
+                    line.push_str(&format!(" f{reg}=0x{:016x}", self.freg(usize::from(reg))));
+                    index += 1;
+                }
+                Change::Mem { addr, .. } => {
+                    // Consecutive byte writes are one store: read them back as one
+                    // value, the way spike logs a word.
+                    let start = addr;
+                    let mut value = 0u32;
+                    let mut width = 0;
+                    while let Some(Change::Mem { addr: next, .. }) = step.changes.get(index) {
+                        if *next != start + width {
+                            break;
+                        }
+                        let byte = self.byte_at(*next).unwrap_or(0);
+                        value |= u32::from(byte) << (8 * width);
+                        width += 1;
+                        index += 1;
+                    }
+                    let digits = width as usize * 2;
+                    let mut text = format!("{value:x}");
+                    while text.len() < digits {
+                        text.insert(0, '0');
+                    }
+                    line.push_str(&format!(" mem[0x{start:08x}]=0x{text}"));
+                }
+            }
+        }
+        line
+    }
+
     fn read_byte(&self, addr: u32) -> Option<u8> {
         if addr == self.board.console {
             return Some(0);
@@ -1908,5 +1959,47 @@ mod spike_board_tests {
         let error = Machine::from_elf_on(board("generic").expect("generic"), &elf)
             .expect_err("outside the generic window");
         assert!(error.contains("outside"), "{error}");
+    }
+}
+
+#[cfg(test)]
+mod trace_tests {
+    use super::*;
+
+    fn machine_with(target: &str, source: &str) -> Machine {
+        let tree = rvh_syntax::parse(source);
+        let target = rvh_isa::Target::parse(target).expect("target");
+        let program = rvh_sem::resolve(&tree, &target);
+        assert!(program.diagnostics.is_empty(), "{:?}", program.diagnostics);
+        let (image, diagnostics) = rvh_asm::assemble(&program);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let mut machine = Machine::new();
+        machine.load(&image);
+        machine
+    }
+
+    fn machine(source: &str) -> Machine {
+        machine_with("rv32i_zicsr", source)
+    }
+
+    #[test]
+    fn a_step_reads_as_one_line() {
+        let mut machine = machine("li t0, 0x100\nli t1, 0x41\nsw t1, 0(t0)\nebreak\n");
+        machine.step();
+        let first = machine.describe_step(machine.trace().last().expect("step"));
+        assert_eq!(first, "0x00000000 0x10000293 x5=0x00000100");
+        machine.step();
+        machine.step();
+        let store = machine.describe_step(machine.trace().last().expect("step"));
+        assert_eq!(store, "0x00000008 0x0062a023 mem[0x00000100]=0x41");
+    }
+
+    #[test]
+    fn a_float_write_shows_sixteen_digits() {
+        let mut machine = machine_with("rv32if", "li t0, 0x3fc00000\nfmv.w.x f0, t0\nebreak\n");
+        machine.step();
+        machine.step();
+        let line = machine.describe_step(machine.trace().last().expect("step"));
+        assert!(line.contains("f0=0xffffffff3fc00000"), "{line}");
     }
 }

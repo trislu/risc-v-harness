@@ -460,6 +460,7 @@ fn run_command(args: &[&str]) -> ExitCode {
     let mut max_steps = 1_000_000u64;
     let mut target_name = "rv32i_zicsr";
     let mut board_name = "generic";
+    let mut trace = false;
 
     let mut index = 1;
     while index < args.len() {
@@ -487,6 +488,7 @@ fn run_command(args: &[&str]) -> ExitCode {
                     return ExitCode::from(2);
                 }
             },
+            "--trace" => trace = true,
             "--board" => match args.get(index + 1) {
                 Some(value) => {
                     board_name = value;
@@ -546,6 +548,27 @@ fn run_command(args: &[&str]) -> ExitCode {
             eprintln!("rvh: refusing to run a program with diagnostics");
             return ExitCode::FAILURE;
         }
+    }
+    if trace {
+        // One line per step, in the shape spike's commit log can be reduced to.
+        let mut steps = 0u64;
+        while steps < max_steps {
+            let before = session.machine().map_or(0, rvh_sim::Machine::steps);
+            if !session.step(1) {
+                break;
+            }
+            steps += 1;
+            if let Some(machine) = session.machine() {
+                if let Some(step) = machine.trace().last() {
+                    if machine.steps() > before {
+                        println!("{}", machine.describe_step(step));
+                    }
+                }
+            }
+        }
+        let halt = session.machine().and_then(|machine| machine.halt());
+        eprintln!("{}", describe_halt(halt));
+        return ExitCode::SUCCESS;
     }
     let halt = session.run(max_steps);
     let Some(machine) = session.machine() else {

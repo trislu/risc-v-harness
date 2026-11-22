@@ -92,6 +92,13 @@ adapter and a browser playground, all over one assembler and one simulator.
   one register. Arithmetic still rounds to nearest even, because the host `f32`
   cannot do otherwise.
 
+#### Tracing
+
+- `rvh run --trace` prints one line per step: `<pc> <word>`, then each write as
+  `x5=0x…`, `f0=0x…` or `mem[0x…]=0x…`. The halt reason goes to stderr. This is
+  the format the spike comparison is built on, so it is documented as an
+  interface rather than debug output.
+
 #### Boards
 
 - A `spike` preset puts RAM at `0x8000_0000`, so one ELF runs in both `rvh` and

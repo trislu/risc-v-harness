@@ -50,6 +50,18 @@ two bytes first, decodes a compressed word when the low bits are not `11`, and
 steps by two (ADR-0018). `009_compressed.s` declares the extension with
 `.attribute arch` and runs without a flag.
 
+`--trace` prints one line per step instead of the final summary:
+
+```text
+0x80000094 0x800012b7 x5=0x80001000
+0x8000009c 0x0062a023 mem[0x80001000]=0x41
+```
+
+The line is `<pc> <word>` followed by each write: `x5=0x…`, `f0=0x…` (16 digits),
+and `mem[0x…]=0x…` for consecutive bytes of one store. It is an interface: the
+spike comparison reduces spike's commit log to the same shape. The halt reason
+goes to stderr, so stdout holds only the trace.
+
 `--board spike` puts RAM at `0x8000_0000`, the map spike boots with, so the same
 ELF runs in both simulators. It is 1 MiB rather than spike's 2 GiB, and the
 console is not shared: a program that prints is not a candidate for comparison.
