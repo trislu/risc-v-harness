@@ -36,6 +36,29 @@ cargo xtask clean --dry-run        # print what would go, remove nothing
 It refuses to remove anything that resolves outside the checkout, and reports the
 total size. `--all` needs a `pnpm install` afterwards.
 
+### Trace comparison
+
+`xtask/verify-trace.sh` runs the same ELF under `rvh` and under
+[spike](https://github.com/riscv-software-src/riscv-isa-sim) and compares the
+result instruction by instruction: address, word, and every write. It needs a
+spike binary; point `RVH_SPIKE` at one, or have `spike` in `PATH`:
+
+```bash
+RVH_SPIKE=~/.local/spike/bin/spike ./xtask/verify-trace.sh
+```
+
+The fixtures link at `0x80000000` (the `spike` board preset), end with a `tohost`
+write that stops spike, and avoid the console. Two things the comparison taught
+us and the fixtures now carry:
+
+- spike traps a floating-point instruction while `mstatus.FS` is Off, so the
+  float fixture enables it first; `rvh` does not model `FS` yet.
+- spike logs a memory read as `mem <addr>` with no value, and needs both
+  `tohost` and `fromhost` symbols before it will stop.
+
+Spike is not a build dependency and is not installed in CI, so this check is
+local and opt-in.
+
 ## Snapshots
 
 `tests/corpus/*.snap` pins the CST shape of every corpus file:
@@ -49,7 +72,8 @@ RVH_BLESS=1 cargo test -p rvh-syntax
 The assembler is compared with the real toolchain rather than with itself:
 
 ```bash
-./xtask/verify-asm.sh    # 65 checks; needs binutils for RISC-V
+./xtask/verify-asm.sh    # checks encodings; needs binutils for RISC-V
+./xtask/verify-trace.sh  # compares step traces with spike; needs spike
 ./xtask/verify-elf.sh    # ELF fixtures from GNU as/ld, plus a round trip
 ./xtask/lsp-smoke.sh     # drive `rvh lsp` over stdio
 node xtask/wasm-smoke.mjs

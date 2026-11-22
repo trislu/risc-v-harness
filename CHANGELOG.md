@@ -99,6 +99,17 @@ adapter and a browser playground, all over one assembler and one simulator.
   the format the spike comparison is built on, so it is documented as an
   interface rather than debug output.
 
+#### Trace comparison
+
+- `xtask/verify-trace.sh` runs one ELF under `rvh` and spike and compares the
+  result step by step: address, word, and every write. Five fixtures (integer,
+  multiply/divide, compressed, atomics, single precision) agree. It is opt-in:
+  set `RVH_SPIKE`, and it skips when spike is absent.
+- Writes are now recorded even when the value does not change, so a trace shows
+  what an instruction wrote rather than what it altered; undo is unaffected.
+- The comparison found a real gap: spike traps an F instruction while
+  `mstatus.FS` is Off, and `rvh` does not model `FS`.
+
 #### Boards
 
 - A `spike` preset puts RAM at `0x8000_0000`, so one ELF runs in both `rvh` and

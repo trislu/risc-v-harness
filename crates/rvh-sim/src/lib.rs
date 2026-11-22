@@ -91,6 +91,22 @@ const FLAG_NX: u32 = 1 << 0;
 const FLAG_DZ: u32 = 1 << 3;
 const FLAG_NV: u32 = 1 << 4;
 
+/// The memory width an instruction writes, in bytes; zero for anything else.
+fn store_width(mnemonic: &str) -> Option<u32> {
+    let width = match mnemonic {
+        "sb" | "c.sb" => 1,
+        "sh" | "c.sh" | "fsh" | "c.fsh" => 2,
+        "sw" | "c.sw" | "fsw" | "c.fsw" | "amoadd.w" | "amoswap.w" | "amoxor.w" | "amoand.w"
+        | "amoor.w" | "amomin.w" | "amomax.w" | "amominu.w" | "amomaxu.w" => 4,
+        "sd" | "c.sd" | "fsd" | "c.fsd" | "amoadd.d" | "amoswap.d" | "amoxor.d" | "amoand.d"
+        | "amoor.d" | "amomin.d" | "amomax.d" | "amominu.d" | "amomaxu.d" => 8,
+        "sc.w" => 4,
+        "sc.d" => 8,
+        _ => return None,
+    };
+    Some(width)
+}
+
 /// The rounding modes of `fcsr.frm`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Rounding {
@@ -558,38 +574,68 @@ impl Machine {
     #[must_use]
     pub fn describe_step(&self, step: &Step) -> String {
         let mut line = format!("0x{:08x} 0x{:08x}", step.pc, step.word);
+        // Registers first, then memory: spike logs them in that order, and the
+        // simulator's internal order is an implementation detail.
+        let mut ordered: Vec<&Change> = step
+            .changes
+            .iter()
+            .filter(|change| !matches!(change, Change::Mem { .. }))
+            .collect();
+        ordered.extend(
+            step.changes
+                .iter()
+                .filter(|change| matches!(change, Change::Mem { .. })),
+        );
         let mut index = 0;
-        while index < step.changes.len() {
-            match step.changes[index] {
+        while index < ordered.len() {
+            match *ordered[index] {
                 Change::Reg { index: reg, .. } => {
                     line.push_str(&format!(" x{reg}=0x{:08x}", self.reg(usize::from(reg))));
                     index += 1;
                 }
                 Change::FReg { index: reg, .. } => {
-                    line.push_str(&format!(" f{reg}=0x{:016x}", self.freg(usize::from(reg))));
+                    // A NaN-boxed single prints as its 32-bit value, as spike does;
+                    // a double needs all 64 bits.
+                    let bits = self.freg(usize::from(reg));
+                    if bits >> 32 == 0xffff_ffff {
+                        line.push_str(&format!(" f{reg}=0x{:08x}", bits as u32));
+                    } else {
+                        line.push_str(&format!(" f{reg}=0x{bits:016x}"));
+                    }
                     index += 1;
                 }
                 Change::Mem { addr, .. } => {
-                    // Consecutive byte writes are one store: read them back as one
-                    // value, the way spike logs a word.
-                    let start = addr;
-                    let mut value = 0u32;
-                    let mut width = 0;
-                    while let Some(Change::Mem { addr: next, .. }) = step.changes.get(index) {
-                        if *next != start + width {
-                            break;
-                        }
-                        let byte = self.byte_at(*next).unwrap_or(0);
-                        value |= u32::from(byte) << (8 * width);
-                        width += 1;
+                    // One store writes one value: report the whole width, even the
+                    // bytes whose value did not change, the way spike does.
+                    let width = step
+                        .insn
+                        .and_then(|insn| store_width(insn.mnemonic))
+                        .unwrap_or(0);
+                    if width == 0 {
+                        line.push_str(&format!(
+                            " mem[0x{addr:08x}]=0x{:02x}",
+                            self.byte_at(addr).unwrap_or(0)
+                        ));
                         index += 1;
+                    } else {
+                        let base = addr & !(width - 1);
+                        let mut value = 0u64;
+                        for offset in 0..width {
+                            let byte = self.byte_at(base + offset).unwrap_or(0);
+                            value |= u64::from(byte) << (8 * offset);
+                        }
+                        let mut text = format!("{value:x}");
+                        while text.len() < width as usize * 2 {
+                            text.insert(0, '0');
+                        }
+                        line.push_str(&format!(" mem[0x{base:08x}]=0x{text}"));
+                        while let Some(Change::Mem { addr: next, .. }) = ordered.get(index) {
+                            if *next < base || *next >= base + width {
+                                break;
+                            }
+                            index += 1;
+                        }
                     }
-                    let digits = width as usize * 2;
-                    let mut text = format!("{value:x}");
-                    while text.len() < digits {
-                        text.insert(0, '0');
-                    }
-                    line.push_str(&format!(" mem[0x{start:08x}]=0x{text}"));
                 }
             }
         }
@@ -613,10 +659,10 @@ impl Machine {
             .and_then(|offset| self.ram.get_mut(offset))
         {
             Some(slot) => {
-                if *slot != value {
-                    changes.push(Change::Mem { addr, old: *slot });
-                    *slot = value;
-                }
+                // Record the byte even when its value is unchanged: a trace shows
+                // that the store happened, as spike's log does.
+                changes.push(Change::Mem { addr, old: *slot });
+                *slot = value;
                 true
             }
             None => false,
@@ -628,27 +674,22 @@ impl Machine {
         if index >= 32 {
             return;
         }
-        let old = self.fregs[index];
-        if old != value {
-            changes.push(Change::FReg {
-                index: index as u8,
-                old,
-            });
-            self.fregs[index] = value;
-        }
+        changes.push(Change::FReg {
+            index: index as u8,
+            old: self.fregs[index],
+        });
+        self.fregs[index] = value;
     }
 
     fn write_reg(&mut self, index: usize, value: u32, changes: &mut Vec<Change>) {
         if index == 0 {
             return;
         }
-        let old = self.regs[index];
-        if old == value {
-            return;
-        }
+        // The write is recorded even when the value is unchanged: a trace shows
+        // what the instruction wrote, as hardware does.
         changes.push(Change::Reg {
             index: index as u8,
-            old,
+            old: self.regs[index],
         });
         self.regs[index] = value;
     }
@@ -1991,15 +2032,15 @@ mod trace_tests {
         machine.step();
         machine.step();
         let store = machine.describe_step(machine.trace().last().expect("step"));
-        assert_eq!(store, "0x00000008 0x0062a023 mem[0x00000100]=0x41");
+        assert_eq!(store, "0x00000008 0x0062a023 mem[0x00000100]=0x00000041");
     }
 
     #[test]
-    fn a_float_write_shows_sixteen_digits() {
+    fn a_boxed_single_prints_its_32_bits() {
         let mut machine = machine_with("rv32if", "li t0, 0x3fc00000\nfmv.w.x f0, t0\nebreak\n");
         machine.step();
         machine.step();
         let line = machine.describe_step(machine.trace().last().expect("step"));
-        assert!(line.contains("f0=0xffffffff3fc00000"), "{line}");
+        assert!(line.contains("f0=0x3fc00000"), "{line}");
     }
 }
