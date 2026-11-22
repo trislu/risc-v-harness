@@ -6,12 +6,17 @@
 // memory handling. Run via `pnpm --dir web run smoke`.
 
 import { createServer } from 'node:http';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const dist = join(root, 'web/dist');
+// The server below serves the built site; say so instead of returning 404s.
+if (!existsSync(join(dist, 'rvh_wasm.wasm'))) {
+  throw new Error(`no built wasm in ${dist}; run \`pnpm --dir web run build\` first`);
+}
 const compiled = join(root, 'target/engine-js/engine.js');
 
 const types = {

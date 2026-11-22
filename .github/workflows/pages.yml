@@ -39,11 +39,13 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
           pnpm --dir web run check
-          pnpm --dir web run smoke
       - name: Build for the project page
         env:
           RVH_BASE: /${{ github.event.repository.name }}/
         run: pnpm --dir web run build
+      # The smoke test serves the built site, so it runs after the build.
+      - name: Drive the TS wrapper against the built artifact
+        run: pnpm --dir web run smoke
       - uses: actions/upload-pages-artifact@v3
         with:
           path: web/dist

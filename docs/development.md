@@ -64,7 +64,8 @@ node xtask/wasm-smoke.mjs
 pnpm install
 pnpm wasm                        # build the wasm into web/public/
 pnpm dev                         # playground at http://localhost:5173
-pnpm --dir web run smoke         # the TS wrapper against the real wasm
+pnpm --dir web run build         # the smoke test serves web/dist
+pnpm --dir web run smoke         # the TS wrapper against the built wasm
 pnpm --dir web run test:e2e      # Playwright: click through the page
 pnpm --dir web run check         # svelte-check
 ```
