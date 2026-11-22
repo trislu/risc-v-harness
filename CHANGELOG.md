@@ -80,8 +80,10 @@ adapter and a browser playground, all over one assembler and one simulator.
   `as -march=rv32ic` (`verify-asm` compares all of them). A compressed operand in
   a register field outside `x8`..`x15`, an offset that is not a multiple of its
   alignment, or a base that is not `sp` is a diagnostic, not a truncated field.
-- Running a compressed program halts with an illegal word: the decoder and the
-  simulator learn the nine layouts next.
+- The simulator decodes and executes the 26 compressed instructions: it reads two
+  bytes first, and steps by two when the low bits are not `11`. `rvh isa decode`
+  tries 16 bits before 32. `009_compressed.s` runs through `.attribute arch`, and
+  a decoder test pins every encoding GNU produced for the fixture.
 
 #### Groundwork
 

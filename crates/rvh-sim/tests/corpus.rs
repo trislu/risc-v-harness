@@ -88,6 +88,14 @@ fn a_file_that_declares_its_target_uses_it() {
 }
 
 #[test]
+fn the_compressed_instructions_run() {
+    // Six two-byte instructions: 6 + 7 = 13, +1 = 14, <<1 = 28, then c.mv.
+    let machine = run("009_compressed.s");
+    assert_eq!(machine.reg(10), 28);
+    assert_eq!(machine.reg(12), 28);
+}
+
+#[test]
 fn the_embedded_base_runs() {
     let machine = run("008_rv32e.s");
     assert_eq!(machine.reg(12), 7);

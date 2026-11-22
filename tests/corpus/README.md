@@ -19,6 +19,7 @@ teaching sequence first and the negative cases last.
 | 006 | [006_arch_directives.s](006_arch_directives.s) | `.option arch, +m` changes the target mid-file |
 | 007 | [007_arch_attribute.s](007_arch_attribute.s) | `.attribute arch` declares the whole file's target |
 | 008 | [008_rv32e.s](008_rv32e.s) | the embedded base: same instructions, 16 registers |
+| 009 | [009_compressed.s](009_compressed.s) | the compressed extension: two-byte instructions |
 | 900 | [900_error_missing_comma.s](900_error_missing_comma.s) | a missing comma, with a fix |
 | 901 | [901_error_stray_token.s](901_error_stray_token.s) | per-line recovery after a stray token |
 | 902 | [902_error_common_mistakes.s](902_error_common_mistakes.s) | did-you-mean, immediate range, CSR spelling, `;` as a comment |

@@ -72,7 +72,10 @@ objcopy=${OBJCOPY:-riscv64-linux-gnu-objcopy}
 for file in "$root"/tests/corpus/*.s; do
     base=$(basename "$file" .s)
     case "$base" in
-    9* | 004_directives) continue ;;
+    # 009 ends with a two-byte instruction, so GNU pads .text to four bytes and the
+    # comparison would measure padding. Its encodings are covered by the RV32C
+    # fixture below.
+    9* | 004_directives | 009_compressed) continue ;;
     esac
     "$assembler" -march=rv32i_zicsr -o "$work/$base.o" "$file"
     "$linker" -m elf32lriscv -Ttext=0 --no-relax -o "$work/$base.elf" "$work/$base.o" 2>"$work/ld.err"

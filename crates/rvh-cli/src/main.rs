@@ -215,6 +215,27 @@ fn decode(text: &str) -> ExitCode {
         eprintln!("rvh: `{text}` is not a 32-bit word");
         return ExitCode::from(2);
     };
+    // A compressed instruction is half a word: try it first (ADR-0018).
+    if rvh_isa::Insn::is_compressed(word) {
+        match rvh_sim::compressed::decode(word as u16) {
+            Some(decoded) => {
+                println!(
+                    "0x{:04x}  {}  rd=x{} rs1=x{} rs2=x{} imm={}",
+                    word as u16,
+                    decoded.insn.mnemonic,
+                    decoded.rd,
+                    decoded.rs1,
+                    decoded.rs2,
+                    decoded.imm
+                );
+                return ExitCode::SUCCESS;
+            }
+            None => {
+                println!("0x{:04x}  <no match>", word as u16);
+                return ExitCode::SUCCESS;
+            }
+        }
+    }
     let found = rvh_isa::decode(word);
     if found.is_empty() {
         println!("0x{word:08x}  <no match>");

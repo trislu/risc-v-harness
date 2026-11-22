@@ -10,6 +10,8 @@
 #![forbid(unsafe_code)]
 
 use rvh_asm::Image;
+
+pub mod compressed;
 use rvh_isa::Insn;
 
 /// A board preset: the memory map a machine runs on.
@@ -267,6 +269,40 @@ impl Machine {
             return false;
         }
         let pc = self.pc;
+        // Two bytes decide the length: a compressed instruction is half a word.
+        let compressed = self
+            .read_value(pc, 2, false)
+            .filter(|half| rvh_isa::Insn::is_compressed(*half));
+        if let Some(half) = compressed {
+            let decoded = compressed::decode(half as u16);
+            let output_len = self.output.len();
+            let mut changes = Vec::new();
+            let outcome = match decoded {
+                Some(decoded) => self.execute_compressed(&decoded, &mut changes),
+                None => Err(HaltReason::Illegal { pc, word: half }),
+            };
+            self.steps += 1;
+            self.trace.push(Step {
+                pc,
+                word: half,
+                insn: decoded.map(|decoded| decoded.insn),
+                changes,
+                output_len,
+            });
+            if self.trace.len() > TRACE_LIMIT {
+                self.trace.remove(0);
+            }
+            return match outcome {
+                Ok(next) => {
+                    self.pc = next;
+                    true
+                }
+                Err(reason) => {
+                    self.halt = Some(reason);
+                    false
+                }
+            };
+        }
         let Some(word) = self.fetch(pc) else {
             self.halt = Some(HaltReason::Fault { pc, addr: pc });
             self.steps += 1;
@@ -279,22 +315,6 @@ impl Machine {
             });
             return false;
         };
-
-        // A compressed instruction is half a word; until the decoder learns the
-        // nine RVC layouts (ADR-0018), say so instead of decoding two
-        // instructions as one.
-        if rvh_isa::Insn::is_compressed(word) {
-            self.halt = Some(HaltReason::Illegal { pc, word });
-            self.steps += 1;
-            self.trace.push(Step {
-                pc,
-                word,
-                insn: None,
-                changes: Vec::new(),
-                output_len: self.output.len(),
-            });
-            return false;
-        }
 
         let insn = rvh_isa::decode(word).first().copied();
         let output_len = self.output.len();
@@ -440,6 +460,115 @@ impl Machine {
         if let Some(slot) = self.csrs.get_mut(index as usize) {
             *slot = value;
         }
+    }
+
+    /// Execute one decoded compressed instruction and return the next pc.
+    ///
+    /// The semantics are the 32-bit ones under another name; the compressed
+    /// encoding only changes how the operands are packed.
+    fn execute_compressed(
+        &mut self,
+        decoded: &compressed::Decoded,
+        changes: &mut Vec<Change>,
+    ) -> Result<u32, HaltReason> {
+        let pc = self.pc;
+        let next = pc.wrapping_add(2);
+        let rd = decoded.rd as usize;
+        let rs1 = decoded.rs1 as usize;
+        let rs2 = decoded.rs2 as usize;
+        let imm = decoded.imm;
+        let target = pc.wrapping_add(imm as u32);
+        let load = |machine: &Self, addr: u32| machine.read_value(addr, 4, false);
+
+        match decoded.insn.mnemonic {
+            "c.addi" => self.write_reg(rd, self.regs[rd].wrapping_add(imm as u32), changes),
+            "c.li" => self.write_reg(rd, imm as u32, changes),
+            "c.lui" => self.write_reg(rd, imm as u32, changes),
+            "c.addi16sp" => self.write_reg(2, self.regs[2].wrapping_add(imm as u32), changes),
+            "c.addi4spn" => self.write_reg(rd, self.regs[2].wrapping_add(imm as u32), changes),
+            "c.slli" => {
+                let value = self.regs[rd].wrapping_shl(imm as u32);
+                self.write_reg(rd, value, changes);
+            }
+            "c.srli" => {
+                let value = self.regs[rs1] >> (imm as u32 & 0x1f);
+                self.write_reg(rs1, value, changes);
+            }
+            "c.srai" => {
+                let value = ((self.regs[rs1] as i32) >> (imm as u32 & 0x1f)) as u32;
+                self.write_reg(rs1, value, changes);
+            }
+            "c.andi" => {
+                let value = self.regs[rs1] & imm as u32;
+                self.write_reg(rs1, value, changes);
+            }
+            "c.sub" => {
+                let value = self.regs[rs1].wrapping_sub(self.regs[rs2]);
+                self.write_reg(rs1, value, changes);
+            }
+            "c.xor" => {
+                let value = self.regs[rs1] ^ self.regs[rs2];
+                self.write_reg(rs1, value, changes);
+            }
+            "c.or" => {
+                let value = self.regs[rs1] | self.regs[rs2];
+                self.write_reg(rs1, value, changes);
+            }
+            "c.and" => {
+                let value = self.regs[rs1] & self.regs[rs2];
+                self.write_reg(rs1, value, changes);
+            }
+            "c.mv" => self.write_reg(rd, self.regs[rs2], changes),
+            "c.add" => {
+                let value = self.regs[rd].wrapping_add(self.regs[rs2]);
+                self.write_reg(rd, value, changes);
+            }
+            "c.lw" | "c.lwsp" => {
+                let addr = self.regs[rs1].wrapping_add(imm as u32);
+                match load(self, addr) {
+                    Some(value) => self.write_reg(rd, value, changes),
+                    None => return Err(HaltReason::Fault { pc, addr }),
+                }
+            }
+            "c.sw" | "c.swsp" => {
+                let addr = self.regs[rs1].wrapping_add(imm as u32);
+                if !self.store(addr, 4, self.regs[rs2], changes) {
+                    return Err(HaltReason::Fault { pc, addr });
+                }
+            }
+            "c.j" => return Ok(target),
+            "c.jal" => {
+                self.write_reg(1, next, changes);
+                return Ok(target);
+            }
+            "c.jr" => {
+                if rs1 == 0 {
+                    return Err(HaltReason::Illegal { pc, word: 0 });
+                }
+                return Ok(self.regs[rs1]);
+            }
+            "c.jalr" => {
+                if rs1 == 0 {
+                    return Err(HaltReason::Illegal { pc, word: 0 });
+                }
+                let target = self.regs[rs1];
+                self.write_reg(1, next, changes);
+                return Ok(target);
+            }
+            "c.beqz" => {
+                if self.regs[rs1] == 0 {
+                    return Ok(target);
+                }
+            }
+            "c.bnez" => {
+                if self.regs[rs1] != 0 {
+                    return Ok(target);
+                }
+            }
+            "c.ebreak" => return Err(HaltReason::Ebreak { pc }),
+            other => panic!("no compressed execution for `{other}`"),
+        }
+        Ok(next)
     }
 
     fn execute(

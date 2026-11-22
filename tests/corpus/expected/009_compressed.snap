@@ -1,0 +1,116 @@
+SourceFile
+  Line
+    Comment "# The compressed extension: every instruction here is two bytes wide."
+    NL "\n"
+  Line
+    Comment "# `--target rv32ic` or `.attribute arch, \"rv32i2p1_c2p0\"` selects it."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".attribute"
+      WS " "
+      Op
+        Ident "arch"
+      Comma ","
+      WS " "
+      Op
+        String "\"rv32i2p1_c2p0\""
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.li"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "6"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.li"
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "7"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.add"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Ident "a1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.addi"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.slli"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "1"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.mv"
+      WS " "
+      Op
+        Ident "a2"
+      Comma ","
+      WS " "
+      Op
+        Ident "a0"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "c.ebreak"
+    NL "\n"
+---
+diagnostics: none

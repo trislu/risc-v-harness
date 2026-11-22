@@ -23,9 +23,10 @@ rvh dap                              # DAP on stdin/stdout
 `rv32e`, ...), and a file overrides it with `.attribute arch` or `.option arch`
 ([ADR-0014](adr/0014-target-precedence.md)).
 
-`--target rv32ic` assembles the 26 RV32C instructions; the simulator does not
-decode compressed words yet, so a `c.*` program assembles and reports an illegal
-instruction when run (ADR-0018).
+`--target rv32ic` assembles and runs the 26 RV32C instructions: the simulator reads
+two bytes first, decodes a compressed word when the low bits are not `11`, and
+steps by two (ADR-0018). `009_compressed.s` declares the extension with
+`.attribute arch` and runs without a flag.
 
 `--board` selects the memory map: `generic` (256 KiB of RAM at 0, the console at
 `0x1000_0000`, `sp` at `0x3_fff0`) or `tiny` (16 KiB, `sp` at `0x3ff0`). The
@@ -109,6 +110,7 @@ step, run and undo. The README animation is recorded from this page by
 | 006 | [006_arch_directives.s](../tests/corpus/006_arch_directives.s) | `.option arch, +m` |
 | 007 | [007_arch_attribute.s](../tests/corpus/007_arch_attribute.s) | `.attribute arch` |
 | 008 | [008_rv32e.s](../tests/corpus/008_rv32e.s) | the embedded base |
+| 009 | [009_compressed.s](../tests/corpus/009_compressed.s) | the compressed extension |
 
 `tests/corpus/README.md` records the numbering rules.
 
