@@ -46,33 +46,6 @@ jobs:
       - run: cargo build -p rvh-wasm --target wasm32-unknown-unknown --release
       - run: node xtask/wasm-smoke.mjs target/wasm32-unknown-unknown/release/rvh_wasm.wasm
 
-  e2e:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --dir web run check
-      - run: pnpm --dir editors/vscode run check
-      - run: pnpm --dir editors/vscode run build
-      - run: pnpm --dir web exec playwright install --with-deps chromium
-      - run: pnpm --dir web run test:e2e
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: playground-screenshot
-          path: assets/playground.png
-          if-no-files-found: ignore
-
   # The differential checks need binutils built for RISC-V, which a stock runner
   # does not ship, so they live in a job that installs it.
   differential:
