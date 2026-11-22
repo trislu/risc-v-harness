@@ -142,5 +142,52 @@ else
     fail=$((fail + 1))
 fi
 
+# RV32C: every compressed instruction, byte for byte against GNU as.
+cat >"$work/c.s" <<'EOF'
+    .text
+    .globl _start
+_start:
+    c.addi4spn a0, sp, 16
+    c.lw a0, 4(a1)
+    c.sw a0, 4(a1)
+    c.addi a0, 1
+    c.jal a
+a:
+    c.li a0, 3
+    c.addi16sp sp, -16
+    c.lui a0, 4
+    c.srli a0, 3
+    c.srai a0, 3
+    c.andi a0, 3
+    c.sub a0, a1
+    c.xor a0, a1
+    c.or a0, a1
+    c.and a0, a1
+    c.j b
+b:
+    c.beqz a0, c
+c:
+    c.bnez a0, b
+    c.slli a0, 3
+    c.lwsp a0, 4(sp)
+    c.jr a0
+    c.mv a0, a1
+    c.ebreak
+    c.jalr a0
+    c.add a0, a1
+    c.swsp a0, 4(sp)
+    add a0, a1, a2
+EOF
+riscv64-linux-gnu-as -march=rv32ic -mabi=ilp32 -o "$work/c.o" "$work/c.s"
+riscv64-linux-gnu-ld -m elf32lriscv -Ttext=0 --no-relax -o "$work/c.elf" "$work/c.o"
+riscv64-linux-gnu-objcopy -O binary -j .text "$work/c.elf" "$work/c.gnu.bin"
+"$rvh" asm "$work/c.s" --target rv32ic --text "$work/c.ours.bin" >/dev/null
+if cmp -s "$work/c.gnu.bin" "$work/c.ours.bin"; then
+    pass=$((pass + 1))
+else
+    echo "BYTES-DIFF rv32c: our .text differs from GNU as + ld"
+    fail=$((fail + 1))
+fi
+
 echo "verify-asm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

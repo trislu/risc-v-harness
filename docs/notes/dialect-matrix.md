@@ -99,3 +99,14 @@ Error: deprecated - extension `m' in .option arch `-m'
 using one, and being more permissive than the assembler costs nothing here;
 `006_arch_directives.s` therefore only uses `+m`, because the corpus must be legal
 input for GNU `as`.
+
+## Compression (`-march=rv32ic`)
+
+GNU `as` compresses some plain instructions when the C extension is enabled:
+`ebreak` becomes `c.ebreak`, `nop` becomes `c.nop`, and `addi` with small
+immediates becomes `c.addi`. `rvh` only emits a compressed word for an explicit
+`c.*` mnemonic; `ebreak` stays four bytes.
+
+`verify-asm.sh` therefore compares the explicit `c.*` forms against GNU, byte for
+byte, and ends its fixture with a four-byte instruction that GNU does not
+compress.

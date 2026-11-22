@@ -274,6 +274,12 @@ pub struct Insn {
     pub opcode: u8,
     pub funct3: Option<u8>,
     pub funct7: Option<u8>,
+    /// `funct6` of a compressed format (bits 15:10).
+    pub funct6: Option<u8>,
+    /// `funct4` of a compressed format (bits 15:12).
+    pub funct4: Option<u8>,
+    /// `funct2`, at bits 6:5 in CA and at bits 12:10 in CB.
+    pub funct2: Option<u8>,
     /// A fixed value in the 12-bit immediate field (system instructions).
     pub imm12: Option<u16>,
     /// Semantic class, used to group content and explanation templates.
@@ -295,6 +301,20 @@ impl Insn {
         if let Some(funct7) = self.funct7 {
             bits |= u32::from(funct7) << 25;
             mask |= 0x7f << 25;
+        }
+        if let Some(funct6) = self.funct6 {
+            bits |= u32::from(funct6) << 10;
+            mask |= 0x3f << 10;
+        }
+        if let Some(funct4) = self.funct4 {
+            bits |= u32::from(funct4) << 12;
+            mask |= 0xf << 12;
+        }
+        if let Some(funct2) = self.funct2 {
+            // CA keeps `funct2` at 6:5; CB keeps it at 12:10.
+            let shift = if self.format == Format::Cb { 10 } else { 5 };
+            bits |= u32::from(funct2) << shift;
+            mask |= 0x3 << shift;
         }
         if let Some(imm12) = self.imm12 {
             bits |= u32::from(imm12) << 20;
@@ -375,10 +395,10 @@ mod tests {
     fn table_is_complete() {
         assert_eq!(
             all().len(),
-            65,
-            "40 RV32I instructions, 6 Zicsr, 8 M and 11 A"
+            91,
+            "40 RV32I, 6 Zicsr, 8 M, 11 A and 26 RV32C instructions"
         );
-        assert_eq!(extensions(), vec!["a", "i", "m", "zicsr"]);
+        assert_eq!(extensions(), vec!["a", "c", "i", "m", "zicsr"]);
     }
 
     #[test]

@@ -1,0 +1,272 @@
+# RV32C: the compressed instructions, 16 bits wide (ADR-0018).
+#
+# A compressed instruction's `opcode` is its two-bit quadrant and every
+# immediate is scrambled; the layouts live in `rvh-asm::encode_compressed` and in
+# the simulator's decoder, next to the six 32-bit formats.
+
+[[insn]]
+id = "c-addi4spn"
+mnemonic = "c.addi4spn"
+ext = "c"
+format = "CIW"
+opcode = 0b00
+funct3 = 0b000
+class = "alu-imm"
+operands = ["rd:gpr", "rs1:gpr", "imm:10:u"]
+
+[[insn]]
+id = "c-lw"
+mnemonic = "c.lw"
+ext = "c"
+format = "CL"
+opcode = 0b00
+funct3 = 0b010
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:7:u"]
+
+[[insn]]
+id = "c-sw"
+mnemonic = "c.sw"
+ext = "c"
+format = "CS"
+opcode = 0b00
+funct3 = 0b110
+class = "store"
+operands = ["rs2:gpr", "rs1:gpr", "imm:7:u"]
+
+[[insn]]
+id = "c-addi"
+mnemonic = "c.addi"
+ext = "c"
+format = "CI"
+opcode = 0b01
+funct3 = 0b000
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:s"]
+
+[[insn]]
+id = "c-jal"
+mnemonic = "c.jal"
+ext = "c"
+format = "CJ"
+opcode = 0b01
+funct3 = 0b001
+class = "branch"
+operands = ["imm:12:s:2"]
+
+[[insn]]
+id = "c-li"
+mnemonic = "c.li"
+ext = "c"
+format = "CI"
+opcode = 0b01
+funct3 = 0b010
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:s"]
+
+[[insn]]
+id = "c-addi16sp"
+mnemonic = "c.addi16sp"
+ext = "c"
+format = "CI"
+opcode = 0b01
+funct3 = 0b011
+class = "alu-imm"
+operands = ["rs1:gpr", "imm:10:s"]
+
+[[insn]]
+id = "c-lui"
+mnemonic = "c.lui"
+ext = "c"
+format = "CI"
+opcode = 0b01
+funct3 = 0b011
+class = "alu-imm"
+operands = ["rd:gpr", "imm:18:s"]
+
+[[insn]]
+id = "c-srli"
+mnemonic = "c.srli"
+ext = "c"
+format = "CB"
+opcode = 0b01
+funct3 = 0b100
+funct2 = 0b00
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:u"]
+
+[[insn]]
+id = "c-srai"
+mnemonic = "c.srai"
+ext = "c"
+format = "CB"
+opcode = 0b01
+funct3 = 0b100
+funct2 = 0b01
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:u"]
+
+[[insn]]
+id = "c-andi"
+mnemonic = "c.andi"
+ext = "c"
+format = "CB"
+opcode = 0b01
+funct3 = 0b100
+funct2 = 0b10
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:s"]
+
+[[insn]]
+id = "c-sub"
+mnemonic = "c.sub"
+ext = "c"
+format = "CA"
+opcode = 0b01
+funct6 = 0b100011
+funct2 = 0b00
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-xor"
+mnemonic = "c.xor"
+ext = "c"
+format = "CA"
+opcode = 0b01
+funct6 = 0b100011
+funct2 = 0b01
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-or"
+mnemonic = "c.or"
+ext = "c"
+format = "CA"
+opcode = 0b01
+funct6 = 0b100011
+funct2 = 0b10
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-and"
+mnemonic = "c.and"
+ext = "c"
+format = "CA"
+opcode = 0b01
+funct6 = 0b100011
+funct2 = 0b11
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-j"
+mnemonic = "c.j"
+ext = "c"
+format = "CJ"
+opcode = 0b01
+funct3 = 0b101
+class = "branch"
+operands = ["imm:12:s:2"]
+
+[[insn]]
+id = "c-beqz"
+mnemonic = "c.beqz"
+ext = "c"
+format = "CB"
+opcode = 0b01
+funct3 = 0b110
+class = "branch"
+operands = ["rs1:gpr", "imm:9:s:2"]
+
+[[insn]]
+id = "c-bnez"
+mnemonic = "c.bnez"
+ext = "c"
+format = "CB"
+opcode = 0b01
+funct3 = 0b111
+class = "branch"
+operands = ["rs1:gpr", "imm:9:s:2"]
+
+[[insn]]
+id = "c-slli"
+mnemonic = "c.slli"
+ext = "c"
+format = "CI"
+opcode = 0b10
+funct3 = 0b000
+class = "alu-imm"
+operands = ["rd:gpr", "imm:6:u"]
+
+[[insn]]
+id = "c-lwsp"
+mnemonic = "c.lwsp"
+ext = "c"
+format = "CI"
+opcode = 0b10
+funct3 = 0b010
+class = "load"
+operands = ["rd:gpr", "rs1:gpr", "imm:8:u"]
+
+[[insn]]
+id = "c-jr"
+mnemonic = "c.jr"
+ext = "c"
+format = "CR"
+opcode = 0b10
+funct4 = 0b1000
+class = "branch"
+operands = ["rs1:gpr"]
+
+[[insn]]
+id = "c-mv"
+mnemonic = "c.mv"
+ext = "c"
+format = "CR"
+opcode = 0b10
+funct4 = 0b1000
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-ebreak"
+mnemonic = "c.ebreak"
+ext = "c"
+format = "CR"
+opcode = 0b10
+funct4 = 0b1001
+class = "system"
+operands = []
+
+[[insn]]
+id = "c-jalr"
+mnemonic = "c.jalr"
+ext = "c"
+format = "CR"
+opcode = 0b10
+funct4 = 0b1001
+class = "branch"
+operands = ["rs1:gpr"]
+
+[[insn]]
+id = "c-add"
+mnemonic = "c.add"
+ext = "c"
+format = "CR"
+opcode = 0b10
+funct4 = 0b1001
+class = "alu-reg"
+operands = ["rd:gpr", "rs2:gpr"]
+
+[[insn]]
+id = "c-swsp"
+mnemonic = "c.swsp"
+ext = "c"
+format = "CSS"
+opcode = 0b10
+funct3 = 0b110
+class = "store"
+operands = ["rs2:gpr", "rs1:gpr", "imm:8:u"]

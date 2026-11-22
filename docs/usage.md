@@ -23,6 +23,10 @@ rvh dap                              # DAP on stdin/stdout
 `rv32e`, ...), and a file overrides it with `.attribute arch` or `.option arch`
 ([ADR-0014](adr/0014-target-precedence.md)).
 
+`--target rv32ic` assembles the 26 RV32C instructions; the simulator does not
+decode compressed words yet, so a `c.*` program assembles and reports an illegal
+instruction when run (ADR-0018).
+
 `--board` selects the memory map: `generic` (256 KiB of RAM at 0, the console at
 `0x1000_0000`, `sp` at `0x3_fff0`) or `tiny` (16 KiB, `sp` at `0x3ff0`). The
 presets live in `rvh-sim`; an unknown name lists the ones that exist.

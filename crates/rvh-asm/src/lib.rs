@@ -154,17 +154,25 @@ pub fn assemble(program: &Program) -> (Image, Vec<Diagnostic>) {
                     data.extend_from_slice(bytes);
                     addr += bytes.len() as u32;
                 }
-                Stmt::Insn { insn, ops, span } => match encode_insn(insn, ops, addr, &labels) {
-                    Ok(word) => {
-                        data.extend_from_slice(&word.to_le_bytes());
-                        addr += 4;
+                Stmt::Insn { insn, ops, span } => {
+                    let result = if insn.size == 2 {
+                        encode_compressed_fields(insn, ops, addr, &labels)
+                            .map(|word| (u32::from(word), 2u32))
+                    } else {
+                        encode_insn(insn, ops, addr, &labels).map(|word| (word, 4u32))
+                    };
+                    match result {
+                        Ok((word, size)) => {
+                            data.extend_from_slice(&word.to_le_bytes()[..size as usize]);
+                            addr += size;
+                        }
+                        Err(message) => {
+                            diagnostics.push(Diagnostic::new("asm.encode", message, *span));
+                            data.extend(std::iter::repeat_n(0u8, insn.size as usize));
+                            addr += u32::from(insn.size);
+                        }
                     }
-                    Err(message) => {
-                        diagnostics.push(Diagnostic::new("asm.encode", message, *span));
-                        data.extend_from_slice(&[0, 0, 0, 0]);
-                        addr += 4;
-                    }
-                },
+                }
                 Stmt::La { rd, sym, span } => match encode_la(*rd, sym, addr, &labels) {
                     Ok(words) => {
                         for word in words {
@@ -235,7 +243,7 @@ fn padding(addr: u32, power: u8) -> usize {
 fn size_of(stmt: &Stmt, addr: u32) -> u32 {
     match stmt {
         Stmt::Label { .. } => 0,
-        Stmt::Insn { .. } => 4,
+        Stmt::Insn { insn, .. } => u32::from(insn.size),
         Stmt::La { .. } => 8,
         Stmt::Data { bytes, .. } => bytes.len() as u32,
         Stmt::Align { power, .. } => padding(addr, *power) as u32,
@@ -264,6 +272,235 @@ fn immediate(op: &Op, pc: u32, labels: &HashMap<String, u32>) -> Result<i64, Str
         }
         Op::Reg(_) => Err("expected an immediate, found a register".to_string()),
     }
+}
+
+/// Encode a compressed instruction (ADR-0018).
+///
+/// The nine formats keep their own layouts here rather than in the data file:
+/// every immediate is scattered, and each one needs its own range check.
+fn encode_compressed_fields(
+    insn: &Insn,
+    ops: &[Op],
+    pc: u32,
+    labels: &HashMap<String, u32>,
+) -> Result<u16, String> {
+    let mut rd = 0u32;
+    let mut rs1 = 0u32;
+    let mut rs2 = 0u32;
+    let mut imm: i64 = 0;
+    for (spec, op) in insn.operands.iter().zip(ops.iter()) {
+        match spec.kind {
+            OperandKind::Rd => rd = register(op)?,
+            OperandKind::Rs1 => rs1 = register(op)?,
+            OperandKind::Rs2 => rs2 = register(op)?,
+            _ => imm = immediate(op, pc, labels)?,
+        }
+    }
+    encode_compressed(insn, rd, rs1, rs2, imm)
+}
+
+fn encode_compressed(insn: &Insn, rd: u32, rs1: u32, rs2: u32, imm: i64) -> Result<u16, String> {
+    // Registers in CIW, CL, CS, CB and CA are three bits naming x8..x15.
+    fn primed(register: u32) -> Result<u32, String> {
+        if (8..16).contains(&register) {
+            Ok(register - 8)
+        } else {
+            Err(format!(
+                "`{}` needs a register in x8..x15 here, found x{register}",
+                register
+            ))
+        }
+    }
+
+    let funct3 = u32::from(insn.funct3.unwrap_or(0)) & 0x7;
+    let base = (funct3 << 13) | u32::from(insn.opcode) & 0x3;
+    let word = match insn.format {
+        Format::Ciw => {
+            // nzuimm[5:4|9:6|2|3]
+            if rs1 != 2 {
+                return Err("`c.addi4spn` needs `sp` as the base".to_string());
+            }
+            if imm <= 0 || imm > 1020 || imm % 4 != 0 {
+                return Err(format!(
+                    "`{}` needs a nonzero multiple of 4 up to 1020, found {imm}",
+                    insn.mnemonic
+                ));
+            }
+            let value = imm as u32;
+            base | ((value >> 4) & 0x3) << 11
+                | ((value >> 6) & 0xf) << 7
+                | ((value >> 2) & 0x1) << 6
+                | ((value >> 3) & 0x1) << 5
+                | primed(rd)? << 2
+        }
+        Format::Cl | Format::Cs => {
+            if !(0..=124).contains(&imm) || imm % 4 != 0 {
+                return Err(format!(
+                    "`{}` needs a multiple of 4 up to 124, found {imm}",
+                    insn.mnemonic
+                ));
+            }
+            let value = imm as u32;
+            let offset =
+                ((value >> 3) & 0x7) << 10 | ((value >> 2) & 0x1) << 6 | ((value >> 6) & 0x1) << 5;
+            let reg = if insn.format == Format::Cl {
+                primed(rd)?
+            } else {
+                primed(rs2)?
+            };
+            let other = primed(rs1)?;
+            base | offset | (other << 7) | (reg << 2)
+        }
+        Format::Ci => match insn.mnemonic {
+            "c.addi16sp" => {
+                if rs1 != 2 {
+                    return Err("`c.addi16sp` needs `sp`".to_string());
+                }
+                if imm == 0 || imm % 16 != 0 || !(-512..=496).contains(&imm) {
+                    return Err(format!(
+                        "`c.addi16sp` needs a nonzero multiple of 16, found {imm}"
+                    ));
+                }
+                let value = imm as u32;
+                base | ((value >> 9) & 0x1) << 12
+                    | ((value >> 4) & 0x1) << 6
+                    | ((value >> 6) & 0x1) << 5
+                    | ((value >> 7) & 0x3) << 3
+                    | ((value >> 5) & 0x1) << 2
+                    | (2 << 7)
+            }
+            "c.lui" => {
+                // The operand is the 6-bit upper field, like `lui`, not the scaled value.
+                if rd == 0 || rd == 2 || imm == 0 || !(-32..=31).contains(&imm) {
+                    return Err(format!(
+                        "`c.lui` needs a nonzero 6-bit upper immediate and rd not in {{0, 2}}, found {imm}"
+                    ));
+                }
+                let value = imm as u32 & 0x3f;
+                base | ((value >> 5) & 0x1) << 12 | (value & 0x1f) << 2 | (rd << 7)
+            }
+            "c.lwsp" => {
+                if rs1 != 2 {
+                    return Err("`c.lwsp` needs `sp`".to_string());
+                }
+                if !(0..=252).contains(&imm) || imm % 4 != 0 || rd == 0 {
+                    return Err(format!(
+                        "`c.lwsp` needs a multiple of 4 up to 252 and rd != 0, found {imm}"
+                    ));
+                }
+                let value = imm as u32;
+                base | ((value >> 5) & 0x1) << 12
+                    | ((value >> 2) & 0x7) << 4
+                    | ((value >> 6) & 0x3) << 2
+                    | (rd << 7)
+            }
+            _ => {
+                // c.addi, c.li and c.slli: imm[5] at 12, imm[4:0] at 6:2.
+                let (low, high) = match insn.mnemonic {
+                    "c.addi" | "c.li" => (-32, 31),
+                    _ => (1, 31),
+                };
+                if imm < low || imm > high {
+                    return Err(format!(
+                        "`{}` immediate {imm} is out of range",
+                        insn.mnemonic
+                    ));
+                }
+                let value = imm as u32 & 0x3f;
+                base | ((value >> 5) & 0x1) << 12 | (value & 0x1f) << 2 | (rd << 7)
+            }
+        },
+        Format::Cr => {
+            let funct4 = u32::from(insn.funct4.unwrap_or(0)) & 0xf;
+            let check = |condition: bool, message: &str| -> Result<(), String> {
+                if condition {
+                    Ok(())
+                } else {
+                    Err(message.to_string())
+                }
+            };
+            match insn.mnemonic {
+                "c.jr" => {
+                    check(rs1 != 0, "`c.jr` needs a nonzero register")?;
+                    base & 0x3 | (funct4 << 12) | (rs1 << 7)
+                }
+                "c.jalr" => {
+                    check(rs1 != 0, "`c.jalr` needs a nonzero register")?;
+                    base & 0x3 | (funct4 << 12) | (rs1 << 7)
+                }
+                "c.ebreak" => base & 0x3 | (funct4 << 12),
+                "c.mv" | "c.add" => {
+                    check(rs2 != 0, "`c.mv` and `c.add` need a nonzero rs2")?;
+                    base & 0x3 | (funct4 << 12) | (rd << 7) | (rs2 << 2)
+                }
+                other => return Err(format!("unknown compressed instruction `{other}`")),
+            }
+        }
+        Format::Css => {
+            if rs1 != 2 {
+                return Err("`c.swsp` needs `sp`".to_string());
+            }
+            if !(0..=252).contains(&imm) || imm % 4 != 0 {
+                return Err(format!(
+                    "`c.swsp` needs a multiple of 4 up to 252, found {imm}"
+                ));
+            }
+            let value = imm as u32;
+            base | ((value >> 2) & 0xf) << 9 | ((value >> 6) & 0x3) << 7 | (rs2 << 2)
+        }
+        Format::Ca => {
+            let funct6 = u32::from(insn.funct6.unwrap_or(0)) & 0x3f;
+            let funct2 = u32::from(insn.funct2.unwrap_or(0)) & 0x3;
+            base & 0x3 | (funct6 << 10) | (primed(rd)? << 7) | (funct2 << 5) | (primed(rs2)? << 2)
+        }
+        Format::Cb => match insn.mnemonic {
+            "c.beqz" | "c.bnez" => {
+                if imm % 2 != 0 || !(-256..=254).contains(&imm) {
+                    return Err(format!("`{}` offset {imm} is out of range", insn.mnemonic));
+                }
+                let value = imm as u32;
+                base | ((value >> 8) & 0x1) << 12
+                    | ((value >> 3) & 0x3) << 10
+                    | (primed(rs1)? << 7)
+                    | ((value >> 6) & 0x3) << 5
+                    | ((value >> 1) & 0x3) << 3
+                    | ((value >> 5) & 0x1) << 2
+            }
+            _ => {
+                // c.srli, c.srai, c.andi: funct2 at 12:10, shamt or imm at 6:2.
+                let funct2 = u32::from(insn.funct2.unwrap_or(0)) & 0x3;
+                if !(0..=63).contains(&imm) {
+                    return Err(format!(
+                        "`{}` immediate {imm} is out of range",
+                        insn.mnemonic
+                    ));
+                }
+                let value = imm as u32 & 0x3f;
+                base & 0x3
+                    | (0x4 << 13)
+                    | (funct2 << 10)
+                    | (primed(rd)? << 7)
+                    | ((value >> 5) & 0x1) << 12
+                    | (value & 0x1f) << 2
+            }
+        },
+        Format::Cj => {
+            if imm % 2 != 0 || !(-2048..=2046).contains(&imm) {
+                return Err(format!("`{}` offset {imm} is out of range", insn.mnemonic));
+            }
+            let value = imm as u32;
+            base | ((value >> 11) & 0x1) << 12
+                | ((value >> 4) & 0x1) << 11
+                | ((value >> 8) & 0x3) << 9
+                | ((value >> 10) & 0x1) << 8
+                | ((value >> 6) & 0x1) << 7
+                | ((value >> 7) & 0x1) << 6
+                | ((value >> 1) & 0x7) << 3
+                | ((value >> 5) & 0x1) << 2
+        }
+        _ => return Err(format!("`{}` is not a compressed format", insn.mnemonic)),
+    };
+    Ok(word as u16)
 }
 
 fn encode_insn(

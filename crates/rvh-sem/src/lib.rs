@@ -1381,7 +1381,7 @@ fn check_operand(insn: &Insn, spec: rvh_isa::Operand, op: &Op, index: usize) -> 
             _ => Err(format!("`{}` needs a 4-bit mask here", insn.mnemonic)),
         },
         OperandKind::Imm => {
-            let branch = matches!(insn.format, Format::B | Format::J);
+            let branch = matches!(insn.format, Format::B | Format::J | Format::Cb | Format::Cj);
             match op {
                 Op::Sym(_) if branch => Ok(()),
                 Op::Sym(name) => Err(format!("`{name}` cannot be used as an immediate here")),

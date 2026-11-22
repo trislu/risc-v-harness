@@ -74,6 +74,15 @@ adapter and a browser playground, all over one assembler and one simulator.
   at `0x3ff0`). `rvh run --board <name>` selects one, the ELF loader checks each
   segment against it, and an unknown name lists the presets.
 
+#### RV32C
+
+- The assembler emits the 26 RV32C instructions, byte-identical to
+  `as -march=rv32ic` (`verify-asm` compares all of them). A compressed operand in
+  a register field outside `x8`..`x15`, an offset that is not a multiple of its
+  alignment, or a base that is not `sp` is a diagnostic, not a truncated field.
+- Running a compressed program halts with an illegal word: the decoder and the
+  simulator learn the nine layouts next.
+
 #### Groundwork
 
 - [ADR-0018](docs/adr/0018-compressed-instructions-are-formats.md): RV32C

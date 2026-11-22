@@ -280,6 +280,22 @@ impl Machine {
             return false;
         };
 
+        // A compressed instruction is half a word; until the decoder learns the
+        // nine RVC layouts (ADR-0018), say so instead of decoding two
+        // instructions as one.
+        if rvh_isa::Insn::is_compressed(word) {
+            self.halt = Some(HaltReason::Illegal { pc, word });
+            self.steps += 1;
+            self.trace.push(Step {
+                pc,
+                word,
+                insn: None,
+                changes: Vec::new(),
+                output_len: self.output.len(),
+            });
+            return false;
+        }
+
         let insn = rvh_isa::decode(word).first().copied();
         let output_len = self.output.len();
         let mut changes = Vec::new();
