@@ -12,6 +12,7 @@
 use rvh_asm::Image;
 
 pub mod compressed;
+pub mod disasm;
 use rvh_isa::Insn;
 
 /// A board preset: the memory map a machine runs on.
@@ -1458,15 +1459,15 @@ fn divide_unsigned(a: u32, b: u32) -> (u32, u32) {
         .map_or((u32::MAX, a), |quotient| (quotient, a % b))
 }
 
-fn imm_i(word: u32) -> i32 {
+pub(crate) fn imm_i(word: u32) -> i32 {
     (word as i32) >> 20
 }
 
-fn imm_s(word: u32) -> i32 {
+pub(crate) fn imm_s(word: u32) -> i32 {
     (((word as i32) >> 25) << 5) | ((word >> 7) & 0x1f) as i32
 }
 
-fn imm_b(word: u32) -> i32 {
+pub(crate) fn imm_b(word: u32) -> i32 {
     let value = (((word >> 31) & 1) << 12)
         | (((word >> 7) & 1) << 11)
         | (((word >> 25) & 0x3f) << 5)
@@ -1478,7 +1479,7 @@ fn imm_u(word: u32) -> u32 {
     word & 0xffff_f000
 }
 
-fn imm_j(word: u32) -> i32 {
+pub(crate) fn imm_j(word: u32) -> i32 {
     let value = (((word >> 31) & 1) << 20)
         | (((word >> 12) & 0xff) << 12)
         | (((word >> 20) & 1) << 11)

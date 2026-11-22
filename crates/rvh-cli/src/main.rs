@@ -215,39 +215,43 @@ fn decode(text: &str) -> ExitCode {
         eprintln!("rvh: `{text}` is not a 32-bit word");
         return ExitCode::from(2);
     };
-    // A compressed instruction is half a word: try it first (ADR-0018).
-    if rvh_isa::Insn::is_compressed(word) {
+    // A compressed instruction is half a word, so it is tried first (ADR-0018).
+    let printed = if rvh_isa::Insn::is_compressed(word) {
         match rvh_sim::compressed::decode(word as u16) {
             Some(decoded) => {
                 println!(
-                    "0x{:04x}  {}  rd=x{} rs1=x{} rs2=x{} imm={}",
+                    "0x{:04x}  {}  (extension {}, format {})",
                     word as u16,
-                    decoded.insn.mnemonic,
-                    decoded.rd,
-                    decoded.rs1,
-                    decoded.rs2,
-                    decoded.imm
+                    rvh_sim::disasm::word(word)
+                        .unwrap_or_else(|| decoded.insn.mnemonic.to_string()),
+                    decoded.insn.ext,
+                    decoded.insn.format.as_str()
                 );
-                return ExitCode::SUCCESS;
+                true
             }
-            None => {
-                println!("0x{:04x}  <no match>", word as u16);
-                return ExitCode::SUCCESS;
-            }
+            None => false,
         }
-    }
-    let found = rvh_isa::decode(word);
-    if found.is_empty() {
+    } else {
+        let found = rvh_isa::decode(word);
+        if found.is_empty() {
+            false
+        } else {
+            let rendered = rvh_sim::disasm::word(word);
+            for insn in found {
+                println!(
+                    "0x{word:08x}  {}  (extension {}, format {})",
+                    rendered
+                        .clone()
+                        .unwrap_or_else(|| insn.mnemonic.to_string()),
+                    insn.ext,
+                    insn.format.as_str()
+                );
+            }
+            true
+        }
+    };
+    if !printed {
         println!("0x{word:08x}  <no match>");
-        return ExitCode::SUCCESS;
-    }
-    for insn in found {
-        println!(
-            "0x{word:08x}  {}  (extension {}, format {})",
-            insn.mnemonic,
-            insn.ext,
-            insn.format.as_str()
-        );
     }
     ExitCode::SUCCESS
 }

@@ -11,9 +11,9 @@ description = "RV32I execution: machine state, step, undo, trace"
 rvh-asm = { path = "../rvh-asm" }
 rvh-elf = { path = "../rvh-elf" }
 rvh-isa = { path = "../rvh-isa" }
+rvh-sem = { path = "../rvh-sem" }
 
 [dev-dependencies]
-rvh-sem = { path = "../rvh-sem" }
 rvh-syntax = { path = "../rvh-syntax" }
 
 [lints]
