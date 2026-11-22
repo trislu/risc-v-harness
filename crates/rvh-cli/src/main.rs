@@ -17,7 +17,7 @@ commands:
   parse <file> [--tree] [--json]   parse assembly and print diagnostics
   asm <file> [-o <path>] [--text <path>] [--symbols] [--target <arch>]
                                    assemble and report, or write an image
-  run <file> [--max-steps <n>] [--target <arch>]
+  run <file> [--max-steps <n>] [--target <arch>] [--board <name>]
                                    assemble and run, then report the result
   hover <file> <line> <column>     explain the token at a position
   lsp [--stdio]                    speak LSP on stdin/stdout
@@ -438,6 +438,7 @@ fn run_command(args: &[&str]) -> ExitCode {
     let path = args[0];
     let mut max_steps = 1_000_000u64;
     let mut target_name = "rv32i_zicsr";
+    let mut board_name = "generic";
 
     let mut index = 1;
     while index < args.len() {
@@ -462,6 +463,16 @@ fn run_command(args: &[&str]) -> ExitCode {
                 }
                 None => {
                     eprintln!("rvh: `--target` needs an architecture");
+                    return ExitCode::from(2);
+                }
+            },
+            "--board" => match args.get(index + 1) {
+                Some(value) => {
+                    board_name = value;
+                    index += 1;
+                }
+                None => {
+                    eprintln!("rvh: `--board` needs a name");
                     return ExitCode::from(2);
                 }
             },
@@ -490,6 +501,17 @@ fn run_command(args: &[&str]) -> ExitCode {
     };
 
     let mut session = rvh_session::Session::new(target);
+    match rvh_sim::board(board_name) {
+        Some(board) => session.set_board(board),
+        None => {
+            let names: Vec<&str> = rvh_sim::BOARDS.iter().map(|board| board.name).collect();
+            eprintln!(
+                "rvh: unknown board `{board_name}`; try one of {}",
+                names.join(", ")
+            );
+            return ExitCode::from(2);
+        }
+    }
     if is_elf {
         if let Err(error) = session.load_elf(&bytes) {
             eprintln!("rvh: {path}: {error}");

@@ -33,6 +33,11 @@ One data path, three front ends:
                      web page editor  debugger   terminal
 ```
 
+A machine runs on a **board preset**: RAM size, console address and initial `sp`.
+`generic` is the default; `tiny` exists so a program that overruns memory shows it
+early. `rvh run --board tiny` selects one, and the ELF loader checks each segment
+against the chosen board.
+
 `rvh-session` is the only crate the front ends touch. It owns one document, its
 tree, its program, its image and one machine, so every front end sees the same
 state after the same edit.
@@ -105,7 +110,7 @@ Each layer has a named artifact, so "IR questions" have concrete answers.
 | 1 | CST | lossless syntax tree per document (hand-written, no dependency) | LSP, playground editor, asm |
 | 2 | sem | symbols, resolved instructions, diagnostics, target env | LSP, playground, asm |
 | 3 | image | bytes, sections, symbols, fixups, source map | asm → sim, ELF codec, disasm |
-| 4 | machine | registers, memory, pc, devices, traps | sim, DAP |
+| 4 | machine | registers, memory, pc, devices, traps, board map | sim, DAP |
 | 5 | trace | per-step log + undo information | playground, DAP, explanation |
 
 Rules that keep the layers honest:

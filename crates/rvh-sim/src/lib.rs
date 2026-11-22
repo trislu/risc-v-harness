@@ -12,12 +12,52 @@
 use rvh_asm::Image;
 use rvh_isa::Insn;
 
-/// RAM size from `board.toml` (ADR-0006): 256 KiB at address 0.
-pub const RAM_SIZE: usize = 0x4_0000;
-/// Byte-wide console. A store here prints the low byte.
-pub const CONSOLE: u32 = 0x1000_0000;
-/// Initial `sp`, from `board.toml`.
-pub const STACK_TOP: u32 = 0x3_fff0;
+/// A board preset: the memory map a machine runs on.
+///
+/// The values are code rather than `board.toml` (ADR-0006 sketched the file) until
+/// a third preset or a second consumer appears; a board is three numbers, and a
+/// TOML file for three numbers would only add a schema to keep in sync.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Board {
+    pub name: &'static str,
+    pub ram_size: usize,
+    pub console: u32,
+    pub stack_top: u32,
+}
+
+impl Board {
+    /// 256 KiB of RAM at address 0, the console at `0x1000_0000`.
+    pub const GENERIC: Self = Self {
+        name: "generic",
+        ram_size: 0x4_0000,
+        console: 0x1000_0000,
+        stack_top: 0x3_fff0,
+    };
+
+    /// 16 KiB of RAM: small enough that an overflow shows up early.
+    pub const TINY: Self = Self {
+        name: "tiny",
+        ram_size: 0x4_000,
+        console: 0x1000_0000,
+        stack_top: 0x3ff0,
+    };
+}
+
+/// Every preset, in the order the CLI lists them.
+pub const BOARDS: &[Board] = &[Board::GENERIC, Board::TINY];
+
+/// Look a preset up by name.
+#[must_use]
+pub fn board(name: &str) -> Option<&'static Board> {
+    BOARDS.iter().find(|board| board.name == name)
+}
+
+/// RAM size of the generic board: 256 KiB at address 0.
+pub const RAM_SIZE: usize = Board::GENERIC.ram_size;
+/// Byte-wide console address of the generic board. A store here prints the low byte.
+pub const CONSOLE: u32 = Board::GENERIC.console;
+/// Initial `sp` of the generic board.
+pub const STACK_TOP: u32 = Board::GENERIC.stack_top;
 /// How many steps of undo history to keep.
 pub const TRACE_LIMIT: usize = 100_000;
 
@@ -63,6 +103,8 @@ pub struct Machine {
     trace: Vec<Step>,
     /// Address reserved by `lr.w`, consumed by the next `sc.w`.
     reservation: Option<u32>,
+    /// Memory map the machine was built on.
+    board: &'static Board,
 }
 
 impl Default for Machine {
@@ -78,17 +120,23 @@ impl Machine {
     /// enough for the bare-metal images this project builds (`-Ttext=0`) and is
     /// checked rather than assumed.
     pub fn from_elf(bytes: &[u8]) -> Result<Self, String> {
+        Self::from_elf_on(&Board::GENERIC, bytes)
+    }
+
+    /// Load an ELF onto another board, checking every segment against its RAM.
+    pub fn from_elf_on(board: &'static Board, bytes: &[u8]) -> Result<Self, String> {
         let executable = rvh_elf::parse(bytes).map_err(|error| error.to_string())?;
         let entry = executable.entry as usize;
-        if entry >= RAM_SIZE {
+        if entry >= board.ram_size {
             return Err(format!(
-                "entry {:#010x} is outside the {} KiB of RAM",
+                "entry {:#010x} is outside the {} KiB of RAM on `{}`",
                 executable.entry,
-                RAM_SIZE / 1024
+                board.ram_size / 1024,
+                board.name
             ));
         }
 
-        let mut machine = Self::new();
+        let mut machine = Self::with_board(board);
         for segment in &executable.segments {
             let start = segment.addr as usize;
             let end = start
@@ -96,12 +144,13 @@ impl Machine {
                 .ok_or_else(|| {
                     format!("segment at {:#010x} has an impossible size", segment.addr)
                 })?;
-            if end > RAM_SIZE {
+            if end > board.ram_size {
                 return Err(format!(
-                    "segment at {:#010x}..{:#010x} does not fit in {} KiB of RAM",
+                    "segment at {:#010x}..{:#010x} does not fit in {} KiB of RAM on `{}`",
                     segment.addr,
                     end,
-                    RAM_SIZE / 1024
+                    board.ram_size / 1024,
+                    board.name
                 ));
             }
             machine.ram[start..start + segment.data.len()].copy_from_slice(&segment.data);
@@ -111,19 +160,32 @@ impl Machine {
     }
 
     pub fn new() -> Self {
+        Self::with_board(&Board::GENERIC)
+    }
+
+    /// A machine with another memory map: RAM size, console address and initial
+    /// `sp` come from `board`.
+    pub fn with_board(board: &'static Board) -> Self {
         let mut regs = [0u32; 32];
-        regs[2] = STACK_TOP;
+        regs[2] = board.stack_top;
         Self {
             pc: 0,
             regs,
-            ram: vec![0; RAM_SIZE],
+            ram: vec![0; board.ram_size],
             csrs: vec![0; 4096],
             output: Vec::new(),
             steps: 0,
             halt: None,
             trace: Vec::new(),
             reservation: None,
+            board,
         }
+    }
+
+    /// The board this machine runs on.
+    #[must_use]
+    pub fn board(&self) -> &'static Board {
+        self.board
     }
 
     /// Load an image and reset the machine.
@@ -316,14 +378,14 @@ impl Machine {
     }
 
     fn read_byte(&self, addr: u32) -> Option<u8> {
-        if addr == CONSOLE {
+        if addr == self.board.console {
             return Some(0);
         }
         self.ram.get(addr as usize).copied()
     }
 
     fn write_byte(&mut self, addr: u32, value: u8, changes: &mut Vec<Change>) -> bool {
-        if addr == CONSOLE {
+        if addr == self.board.console {
             self.output.push(value);
             return true;
         }
@@ -986,5 +1048,49 @@ mod atomic_tests {
         assert!(matches!(machine.halt(), Some(HaltReason::Fault { .. })));
         assert_eq!(machine.reg(10), 0);
         let _ = &mut machine;
+    }
+}
+
+#[cfg(test)]
+mod board_tests {
+    use super::*;
+
+    static CUSTOM: Board = Board {
+        name: "custom",
+        ram_size: 0x40,
+        console: 0x20,
+        stack_top: 0x30,
+    };
+
+    #[test]
+    fn the_generic_board_keeps_the_documented_map() {
+        let board = board("generic").expect("generic");
+        assert_eq!(board.ram_size, 0x4_0000);
+        assert_eq!(board.stack_top, 0x3_fff0);
+        assert_eq!(board.console, 0x1000_0000);
+    }
+
+    #[test]
+    fn a_named_board_changes_the_ram_and_the_stack() {
+        let tiny = board("tiny").expect("tiny");
+        let machine = Machine::with_board(tiny);
+        assert_eq!(machine.board().name, "tiny");
+        assert_eq!(machine.reg(2), tiny.stack_top);
+        assert_eq!(machine.ram.len(), tiny.ram_size);
+    }
+
+    #[test]
+    fn the_console_address_follows_the_board() {
+        let mut machine = Machine::with_board(&CUSTOM);
+        assert!(machine.store(CUSTOM.console, 1, u32::from(b'A'), &mut Vec::new()));
+        assert_eq!(machine.output(), b"A");
+        // The generic console address is not special here, and it is outside
+        // this board's RAM, so a store there fails instead of printing.
+        assert!(!machine.store(0x1000_0000, 1, u32::from(b'B'), &mut Vec::new()));
+    }
+
+    #[test]
+    fn an_unknown_board_is_none() {
+        assert!(board("no-such-board").is_none());
     }
 }

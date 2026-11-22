@@ -23,6 +23,10 @@ rvh dap                              # DAP on stdin/stdout
 `rv32e`, ...), and a file overrides it with `.attribute arch` or `.option arch`
 ([ADR-0014](adr/0014-target-precedence.md)).
 
+`--board` selects the memory map: `generic` (256 KiB of RAM at 0, the console at
+`0x1000_0000`, `sp` at `0x3_fff0`) or `tiny` (16 KiB, `sp` at `0x3ff0`). The
+presets live in `rvh-sim`; an unknown name lists the ones that exist.
+
 ## VS Code extension
 
 The extension starts `rvh lsp` and contributes the `rvh` debug type.

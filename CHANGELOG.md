@@ -66,6 +66,14 @@ adapter and a browser playground, all over one assembler and one simulator.
 - Recorded demo captures: a diagnostic and its fix, hover, go to definition,
   completion, the target picker, a debug session, and the playground.
 
+#### Content and boards
+
+- The Chinese overlay covers directives and registers as well as
+  pseudo-instructions; an untranslated key still falls back to English.
+- Board presets: `generic` (256 KiB, `sp` at `0x3_fff0`) and `tiny` (16 KiB, `sp`
+  at `0x3ff0`). `rvh run --board <name>` selects one, the ELF loader checks each
+  segment against it, and an unknown name lists the presets.
+
 ### Limits
 
 - The C, F and D extensions are not implemented; `rv64i` and `rv64e` are named but

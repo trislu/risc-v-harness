@@ -28,6 +28,8 @@ pub struct Session {
     image: Image,
     diagnostics: Vec<Diagnostic>,
     machine: Option<Machine>,
+    /// Memory map every machine in this session is built on.
+    board: &'static rvh_sim::Board,
 }
 
 impl Session {
@@ -43,6 +45,7 @@ impl Session {
             image: empty_image(),
             diagnostics: Vec::new(),
             machine: None,
+            board: &rvh_sim::Board::GENERIC,
         };
         session.rebuild();
         session
@@ -54,7 +57,7 @@ impl Session {
     /// The document tree is left as it was; only the machine changes. Hover and
     /// tokens keep working on whatever the editor holds.
     pub fn load_elf(&mut self, bytes: &[u8]) -> Result<(), String> {
-        let machine = rvh_sim::Machine::from_elf(bytes)?;
+        let machine = rvh_sim::Machine::from_elf_on(self.board, bytes)?;
         self.machine = Some(machine);
         self.diagnostics.clear();
         Ok(())
@@ -89,10 +92,21 @@ impl Session {
         self.machine = None;
         self.diagnostics = diagnostics;
         if self.diagnostics.is_empty() {
-            let mut machine = Machine::new();
+            let mut machine = Machine::with_board(self.board);
             machine.load(&self.image);
             self.machine = Some(machine);
         }
+    }
+
+    /// Run on another board. Rebuilds the machine, keeping the source.
+    pub fn set_board(&mut self, board: &'static rvh_sim::Board) {
+        self.board = board;
+        self.rebuild();
+    }
+
+    #[must_use]
+    pub fn board(&self) -> &'static rvh_sim::Board {
+        self.board
     }
 
     #[must_use]
@@ -1464,5 +1478,42 @@ mod hover_spot_tests {
         let hover = hover_at(".option arch, +m\n", "arch");
         assert_eq!(hover.kind, "attribute");
         assert!(hover.text.contains("rv32i2p1"), "{}", hover.text);
+    }
+}
+
+#[cfg(test)]
+mod board_tests {
+    use super::*;
+
+    #[test]
+    fn a_board_changes_the_stack_and_the_ram() {
+        let mut session = Session::new(Target::parse("rv32i_zicsr").expect("target"));
+        session.set_source("_start:\n    ebreak\n");
+        assert_eq!(session.machine().expect("machine").reg(2), 0x3_fff0);
+
+        session.set_board(rvh_sim::board("tiny").expect("tiny"));
+        assert_eq!(session.board().name, "tiny");
+        assert_eq!(session.machine().expect("machine").reg(2), 0x3ff0);
+    }
+
+    #[test]
+    fn an_elf_that_does_not_fit_the_board_is_rejected() {
+        let executable = rvh_elf::Executable {
+            entry: 0x8000,
+            segments: vec![rvh_elf::Segment {
+                addr: 0x8000,
+                data: vec![0x13, 0x00, 0x00, 0x00],
+                mem_size: 4,
+                flags: 5,
+            }],
+        };
+        let bytes = rvh_elf::write(&executable);
+        assert!(
+            rvh_sim::Machine::from_elf(&bytes).is_ok(),
+            "the generic board has room at 0x8000"
+        );
+        let error = rvh_sim::Machine::from_elf_on(rvh_sim::board("tiny").expect("tiny"), &bytes)
+            .expect_err("the tiny board does not");
+        assert!(error.contains("tiny"), "{error}");
     }
 }

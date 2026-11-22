@@ -72,6 +72,21 @@ mod tests {
     }
 
     #[test]
+    fn chinese_covers_directives_and_registers_too() {
+        let directive = text("zh-CN", Kind::Directive, ".text").expect("translated");
+        assert!(directive.contains("代码段"), "{directive}");
+        let register = register_role("zh-CN", 2).expect("translated");
+        assert!(register.contains("栈"), "{register}");
+    }
+
+    #[test]
+    fn an_untranslated_key_falls_back_to_english() {
+        // `blez` is in the English overlay only; the lookup must not go empty.
+        let fallback = text("zh-CN", Kind::Pseudo, "blez").expect("fallback");
+        assert!(fallback.contains("branch"), "{fallback}");
+    }
+
+    #[test]
     fn chinese_covers_the_translated_keys() {
         let translated = text("zh-CN", Kind::Pseudo, "li").expect("translated");
         assert!(translated.contains("加载"), "{translated}");
@@ -79,14 +94,9 @@ mod tests {
 
     #[test]
     fn untranslated_keys_fall_back_to_english() {
+        // `neg` has no Chinese line; the lookup returns the English one.
         let english = text("en", Kind::Pseudo, "neg").expect("english");
         assert_eq!(text("zh-CN", Kind::Pseudo, "neg"), Some(english));
-        // Directives have no translation yet at all.
-        assert_eq!(
-            text("zh-CN", Kind::Directive, ".text"),
-            text("en", Kind::Directive, ".text")
-        );
-        assert_eq!(register_role("zh-CN", 2), register_role("en", 2));
     }
 
     #[test]

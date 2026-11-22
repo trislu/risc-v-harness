@@ -96,6 +96,30 @@ pub static EN_REGISTERS: &[(&str, &str)] = &[
 ];
 
 #[rustfmt::skip]
+pub static ZH_CN_DIRECTIVES: &[(&str, &str)] = &[
+    (".text", "切换到代码段"),
+    (".data", "切换到数据段"),
+    (".rodata", "切换到只读数据段"),
+    (".section", "切换到指定名字的段"),
+    (".globl", "把符号标记为全局可见"),
+    (".global", "把符号标记为全局可见"),
+    (".align", "对齐到 2 的幂边界"),
+    (".p2align", "对齐到 2 的幂边界"),
+    (".byte", "写入字节"),
+    (".half", "写入 16 位整数"),
+    (".word", "写入 32 位整数"),
+    (".dword", "写入 64 位整数"),
+    (".string", "写入以 NUL 结尾的字符串"),
+    (".asciz", "写入以 NUL 结尾的字符串"),
+    (".equ", "定义常量"),
+    (".set", "定义常量"),
+    (".zero", "写入 N 个零字节"),
+    (".space", "写入 N 个零字节"),
+    (".option", "从本行起改变目标，例如 `.option arch, +m`"),
+    (".attribute", "声明文件属性，例如 `.attribute arch, \"rv32i2p1_m2p0\"`"),
+];
+
+#[rustfmt::skip]
 pub static ZH_CN_PSEUDOS: &[(&str, &str)] = &[
     ("li", "加载立即数：放得下时用 `addi`，否则 `lui` + `addi`"),
     ("la", "加载地址：`auipc` 加 `addi` 两条"),
@@ -109,6 +133,42 @@ pub static ZH_CN_PSEUDOS: &[(&str, &str)] = &[
     ("csrw", "写 CSR：`csrrw x0, csr, rs`"),
 ];
 
+#[rustfmt::skip]
+pub static ZH_CN_REGISTERS: &[(&str, &str)] = &[
+    ("0", "恒为零；写入被忽略"),
+    ("1", "返回地址"),
+    ("2", "栈指针"),
+    ("3", "全局指针"),
+    ("4", "线程指针"),
+    ("5", "临时寄存器"),
+    ("6", "临时寄存器"),
+    ("7", "临时寄存器"),
+    ("8", "被调用者保存；也用作帧指针"),
+    ("9", "被调用者保存"),
+    ("10", "函数参数，也用于返回值"),
+    ("11", "函数参数，也用于返回值"),
+    ("12", "函数参数"),
+    ("13", "函数参数"),
+    ("14", "函数参数"),
+    ("15", "函数参数"),
+    ("16", "函数参数"),
+    ("17", "函数参数"),
+    ("18", "被调用者保存"),
+    ("19", "被调用者保存"),
+    ("20", "被调用者保存"),
+    ("21", "被调用者保存"),
+    ("22", "被调用者保存"),
+    ("23", "被调用者保存"),
+    ("24", "被调用者保存"),
+    ("25", "被调用者保存"),
+    ("26", "被调用者保存"),
+    ("27", "被调用者保存"),
+    ("28", "临时寄存器"),
+    ("29", "临时寄存器"),
+    ("30", "临时寄存器"),
+    ("31", "临时寄存器"),
+];
+
 /// The table for a locale and kind, if the overlay provides one.
 #[must_use]
 pub fn table(locale: &str, kind: &str) -> Option<&'static [(&'static str, &'static str)]> {
@@ -116,7 +176,9 @@ pub fn table(locale: &str, kind: &str) -> Option<&'static [(&'static str, &'stat
         ("en", "directives") => Some(EN_DIRECTIVES),
         ("en", "pseudos") => Some(EN_PSEUDOS),
         ("en", "registers") => Some(EN_REGISTERS),
+        ("zh-CN", "directives") => Some(ZH_CN_DIRECTIVES),
         ("zh-CN", "pseudos") => Some(ZH_CN_PSEUDOS),
+        ("zh-CN", "registers") => Some(ZH_CN_REGISTERS),
         _ => None,
     }
 }
