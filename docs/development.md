@@ -146,3 +146,9 @@ Messages follow Conventional Commits. `CHANGELOG.md` keeps the user-facing
 summary; the commit body says what changed and why. A published commit is never
 rewritten: a fix goes on top, so the history a reader can fetch stays the history
 they had.
+
+One commit does one thing. A `release:` commit carries the version bump, the
+lockfiles and the CHANGELOG section, and nothing else: the features and fixes the
+release mentions are commits of their own, so a reader can review each one. Local
+work may be squashed or rebased, but the reason to squash is that the changes
+serve one intent, not that one commit is faster to write.
