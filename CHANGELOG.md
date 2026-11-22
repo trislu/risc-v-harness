@@ -86,7 +86,12 @@ adapter and a browser playground, all over one assembler and one simulator.
 - The fused multiply-add family (`fmadd.s`, `fmsub.s`, `fnmsub.s`, `fnmadd.s`)
   rounds its product and addend once, through Rust's `mul_add`; a test pins the
   case where one rounding and two roundings differ.
-- Not yet: `fcsr` (rounding mode and flags) and the D extension. The encodings
+- `fcsr` is modelled: `frm` selects the rounding mode used by the conversions
+  (nearest-even, toward zero, down, up, ties away), and `fflags` collects the
+  sticky `NX`, `DZ` and `NV` bits. `fflags`, `frm` and `fcsr` are three views of
+  one register. Arithmetic still rounds to nearest even, because the host `f32`
+  cannot do otherwise.
+- Not yet: the D extension. The encodings
   use the dynamic-rounding field, which the simulator treats as
   round-to-nearest-even.
 

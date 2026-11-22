@@ -33,8 +33,11 @@ the four arithmetic operations, the fused multiply-add family, `fsgnj`/`fsgnjn`/
 `fsgnjx`, `fmin`/`fmax`, the three comparisons, `fclass`, the four conversions,
 and both `fmv` moves. The floating
 registers hold 32-bit patterns, arithmetic goes through IEEE 754 single precision,
-and `fcsr` (rounding mode and flags) is not modelled yet: the encodings use the
-dynamic-rounding field, which the simulator treats as round-to-nearest-even.
+and `fcsr` is modelled: `frm` picks the rounding mode for the conversions, `fflags`
+collects the sticky exception bits (`NX`, `DZ`, `NV`), and `fflags`, `frm` and
+`fcsr` are three views of one register, so `csrr`/`csrw` reach them like any other
+CSR. Arithmetic still rounds to nearest even — the host's `f32` cannot round
+otherwise — and that limit is stated rather than hidden.
 
 `--target rv32ic` assembles and runs the 26 RV32C instructions: the simulator reads
 two bytes first, decodes a compressed word when the low bits are not `11`, and

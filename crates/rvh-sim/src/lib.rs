@@ -71,6 +71,52 @@ pub enum Change {
     Mem { addr: u32, old: u8 },
 }
 
+/// Bits of `fcsr.fflags`.
+const FLAG_NX: u32 = 1 << 0;
+const FLAG_DZ: u32 = 1 << 3;
+const FLAG_NV: u32 = 1 << 4;
+
+/// The rounding modes of `fcsr.frm`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Rounding {
+    /// Round to nearest, ties to even.
+    NearestEven,
+    /// Round toward zero.
+    Zero,
+    /// Round down, toward minus infinity.
+    Down,
+    /// Round up, toward plus infinity.
+    Up,
+    /// Round to nearest, ties away from zero.
+    NearestAway,
+}
+
+impl Rounding {
+    /// Mode 5..7 are reserved; they behave like round-to-nearest-even here.
+    #[must_use]
+    pub fn from_bits(bits: u32) -> Self {
+        match bits {
+            1 => Self::Zero,
+            2 => Self::Down,
+            3 => Self::Up,
+            4 => Self::NearestAway,
+            _ => Self::NearestEven,
+        }
+    }
+
+    /// Round a float to an integer value, still as a float.
+    #[must_use]
+    pub fn round(self, value: f32) -> f32 {
+        match self {
+            Self::NearestEven => value.round_ties_even(),
+            Self::Zero => value.trunc(),
+            Self::Down => value.floor(),
+            Self::Up => value.ceil(),
+            Self::NearestAway => (value + value.signum() * 0.5).trunc(),
+        }
+    }
+}
+
 /// Why the machine stopped.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum HaltReason {
@@ -101,6 +147,8 @@ pub struct Machine {
     ram: Vec<u8>,
     /// Floating-point registers, held as their 32-bit patterns.
     fregs: [u32; 32],
+    /// `fcsr`: `frm` in bits 7:5, `fflags` in bits 4:0.
+    fcsr: u32,
     csrs: Vec<u32>,
     output: Vec<u8>,
     steps: u64,
@@ -178,6 +226,7 @@ impl Machine {
             regs,
             ram: vec![0; board.ram_size],
             fregs: [0; 32],
+            fcsr: 0,
             csrs: vec![0; 4096],
             output: Vec::new(),
             steps: 0,
@@ -479,13 +528,42 @@ impl Machine {
     }
 
     fn csr_read(&self, index: u32) -> u32 {
-        self.csrs.get(index as usize).copied().unwrap_or(0)
+        // `fflags`, `frm` and `fcsr` are three views of one register.
+        match index {
+            0x001 => self.fcsr & 0x1f,
+            0x002 => (self.fcsr >> 5) & 0x7,
+            0x003 => self.fcsr,
+            _ => self.csrs.get(index as usize).copied().unwrap_or(0),
+        }
     }
 
     fn csr_write(&mut self, index: u32, value: u32) {
-        if let Some(slot) = self.csrs.get_mut(index as usize) {
-            *slot = value;
+        match index {
+            0x001 => self.fcsr = (self.fcsr & !0x1f) | (value & 0x1f),
+            0x002 => self.fcsr = (self.fcsr & !0xe0) | ((value & 0x7) << 5),
+            0x003 => self.fcsr = value & 0xff,
+            _ => {
+                if let Some(slot) = self.csrs.get_mut(index as usize) {
+                    *slot = value;
+                }
+            }
         }
+    }
+
+    /// The rounding mode a float instruction should use.
+    ///
+    /// `funct3` is the rounding field: 0..4 name a mode, 7 means "take `frm`".
+    fn rounding(&self, funct3: u32) -> Rounding {
+        let mode = if funct3 == 7 {
+            (self.fcsr >> 5) & 0x7
+        } else {
+            funct3
+        };
+        Rounding::from_bits(mode)
+    }
+
+    fn set_flag(&mut self, flag: u32) {
+        self.fcsr |= flag & 0x1f;
     }
 
     /// Execute one decoded compressed instruction and return the next pc.
@@ -612,6 +690,7 @@ impl Machine {
         let b = self.regs[rs2];
         let imm_i = imm_i(word);
         let csr = (word >> 20) & 0xfff;
+        let funct3 = (word >> 12) & 0x7;
         let zimm = (word >> 15) & 0x1f;
 
         match insn.mnemonic {
@@ -757,6 +836,14 @@ impl Machine {
             "fadd.s" | "fsub.s" | "fmul.s" | "fdiv.s" => {
                 let left = f32::from_bits(self.fregs[rs1]);
                 let right = f32::from_bits(self.fregs[rs2]);
+                // 0/0 is invalid, x/0 is divide-by-zero.
+                if insn.mnemonic == "fdiv.s" && right == 0.0 {
+                    self.set_flag(if left == 0.0 || left.is_nan() {
+                        FLAG_NV
+                    } else {
+                        FLAG_DZ
+                    });
+                }
                 let value = match insn.mnemonic {
                     "fadd.s" => left + right,
                     "fsub.s" => left - right,
@@ -793,6 +880,10 @@ impl Machine {
             "feq.s" | "flt.s" | "fle.s" => {
                 let left = f32::from_bits(self.fregs[rs1]);
                 let right = f32::from_bits(self.fregs[rs2]);
+                if left.is_nan() || right.is_nan() {
+                    // Comparisons signal invalid on a quiet NaN operand.
+                    self.set_flag(FLAG_NV);
+                }
                 let value = match insn.mnemonic {
                     "feq.s" => left == right,
                     "flt.s" => left < right,
@@ -863,35 +954,56 @@ impl Machine {
             }
             "fcvt.w.s" | "fcvt.wu.s" => {
                 let value = f32::from_bits(self.fregs[rs1]);
-                // Round to nearest, ties to even; NaN and out-of-range saturate.
-                let rounded = if value.is_nan() {
-                    u32::MAX as f32
-                } else {
-                    value.round_ties_even()
-                };
-                let bits = if insn.mnemonic == "fcvt.w.s" {
-                    if rounded >= 2147483648.0 {
+                let mode = self.rounding(funct3);
+                if value.is_nan() {
+                    // Invalid: the result saturates at the largest integer.
+                    self.set_flag(FLAG_NV);
+                    let bits = if insn.mnemonic == "fcvt.w.s" {
                         i32::MAX as u32
-                    } else if rounded < -2147483648.0 {
-                        i32::MIN as u32
                     } else {
-                        rounded as i32 as u32
-                    }
-                } else if rounded <= 0.0 {
-                    0
-                } else if rounded >= 4294967296.0 {
-                    u32::MAX
+                        u32::MAX
+                    };
+                    self.write_reg(rd, bits, changes);
                 } else {
-                    rounded as u32
-                };
-                self.write_reg(rd, bits, changes);
+                    let rounded = mode.round(value);
+                    if rounded != value {
+                        self.set_flag(FLAG_NX);
+                    }
+                    let bits = if insn.mnemonic == "fcvt.w.s" {
+                        if rounded >= 2147483648.0 {
+                            self.set_flag(FLAG_NV);
+                            i32::MAX as u32
+                        } else if rounded < -2147483648.0 {
+                            self.set_flag(FLAG_NV);
+                            i32::MIN as u32
+                        } else {
+                            rounded as i32 as u32
+                        }
+                    } else if rounded <= 0.0 {
+                        if rounded < 0.0 {
+                            self.set_flag(FLAG_NV);
+                        }
+                        0
+                    } else if rounded >= 4294967296.0 {
+                        self.set_flag(FLAG_NV);
+                        u32::MAX
+                    } else {
+                        rounded as u32
+                    };
+                    self.write_reg(rd, bits, changes);
+                }
             }
             "fcvt.s.w" | "fcvt.s.wu" => {
-                let value = if insn.mnemonic == "fcvt.s.w" {
-                    a as i32 as f32
+                let (exact, value) = if insn.mnemonic == "fcvt.s.w" {
+                    let integer = a as i32;
+                    (i64::from(integer), integer as f32)
                 } else {
-                    a as f32
+                    (i64::from(a), a as f32)
                 };
+                // The host rounds to nearest; report an inexact conversion.
+                if value as i64 != exact {
+                    self.set_flag(FLAG_NX);
+                }
                 self.write_freg(rd, value.to_bits(), changes);
             }
             "fmv.w.x" => {
@@ -1489,5 +1601,54 @@ mod float_tests {
         );
         assert_eq!(machine.reg(10), 0x4020_0000);
         assert_eq!(machine.reg(11), 0x4020_0000);
+    }
+}
+
+#[cfg(test)]
+mod fcsr_tests {
+    use super::*;
+
+    fn run(source: &str) -> Machine {
+        let tree = rvh_syntax::parse(source);
+        let target = rvh_isa::Target::parse("rv32if").expect("target");
+        let program = rvh_sem::resolve(&tree, &target);
+        assert!(program.diagnostics.is_empty(), "{:?}", program.diagnostics);
+        let (image, diagnostics) = rvh_asm::assemble(&program);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let mut machine = Machine::new();
+        machine.load(&image);
+        machine.run(100);
+        machine
+    }
+
+    #[test]
+    fn frm_changes_the_conversion_rounding() {
+        // 2.5 converted under RDN, RUP and RNE.
+        let machine = run(
+            "_start:\n    li t0, 0x40200000\n    fmv.w.x f0, t0\n    li t1, 2\n    csrw frm, t1\n    fcvt.w.s a0, f0\n    li t2, 3\n    csrw frm, t2\n    fcvt.w.s a1, f0\n    csrw frm, zero\n    fcvt.w.s a2, f0\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 2, "round down");
+        assert_eq!(machine.reg(11), 3, "round up");
+        assert_eq!(machine.reg(12), 2, "ties to even");
+    }
+
+    #[test]
+    fn fflags_accumulate_and_can_be_cleared() {
+        let machine = run(
+            "_start:\n    li t0, 0x3f800000\n    fmv.w.x f0, t0\n    fmv.w.x f5, zero\n    fdiv.s f2, f0, f5\n    csrr a0, fflags\n    fdiv.s f3, f5, f5\n    csrr a1, fflags\n    csrw fflags, zero\n    csrr a2, fflags\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 0x08, "divide by zero");
+        assert_eq!(machine.reg(11), 0x18, "and invalid on 0/0");
+        assert_eq!(machine.reg(12), 0, "cleared");
+    }
+
+    #[test]
+    fn frm_and_fflags_are_two_views_of_fcsr() {
+        let machine = run(
+            "_start:\n    li t0, 0x23\n    csrw fcsr, t0\n    csrr a0, fcsr\n    csrr a1, frm\n    csrr a2, fflags\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 0x23);
+        assert_eq!(machine.reg(11), 1, "fcsr >> 5");
+        assert_eq!(machine.reg(12), 3, "fcsr & 0x1f");
     }
 }
