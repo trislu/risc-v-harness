@@ -13,8 +13,30 @@ on:
       - 'v*'
 
 jobs:
+  # A tag that does not name the manifest version packages the old version, and
+  # every publish job then skips it as already published: a green run that
+  # releases nothing. Fail before building instead.
+  version:
+    name: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: |
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "not a release tag; nothing to check"
+            exit 0
+          fi
+          version=$(python3 -c "import json;print(json.load(open('editors/vscode/package.json'))['version'])")
+          if [[ "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo "tag $GITHUB_REF_NAME does not name manifest version $version" >&2
+            exit 1
+          fi
+          echo "$GITHUB_REF_NAME matches editors/vscode/package.json"
+
   package:
     name: ${{ matrix.target }}
+    needs: version
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
