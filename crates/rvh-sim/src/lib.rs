@@ -22,6 +22,9 @@ use rvh_isa::Insn;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Board {
     pub name: &'static str,
+    /// Where RAM starts. Zero for our own boards; `0x8000_0000` for the preset
+    /// that matches spike, so one ELF can run in both simulators.
+    pub ram_base: u32,
     pub ram_size: usize,
     pub console: u32,
     pub stack_top: u32,
@@ -31,6 +34,7 @@ impl Board {
     /// 256 KiB of RAM at address 0, the console at `0x1000_0000`.
     pub const GENERIC: Self = Self {
         name: "generic",
+        ram_base: 0,
         ram_size: 0x4_0000,
         console: 0x1000_0000,
         stack_top: 0x3_fff0,
@@ -39,14 +43,25 @@ impl Board {
     /// 16 KiB of RAM: small enough that an overflow shows up early.
     pub const TINY: Self = Self {
         name: "tiny",
+        ram_base: 0,
         ram_size: 0x4_000,
         console: 0x1000_0000,
         stack_top: 0x3ff0,
     };
+
+    /// 1 MiB at `0x8000_0000`: the map spike boots with, so one ELF can run in
+    /// both simulators. Programs stay inside 1 MiB and leave the console alone.
+    pub const SPIKE: Self = Self {
+        name: "spike",
+        ram_base: 0x8000_0000,
+        ram_size: 0x10_0000,
+        console: 0x1000_0000,
+        stack_top: 0x800f_fff0,
+    };
 }
 
 /// Every preset, in the order the CLI lists them.
-pub const BOARDS: &[Board] = &[Board::GENERIC, Board::TINY];
+pub const BOARDS: &[Board] = &[Board::GENERIC, Board::TINY, Board::SPIKE];
 
 /// Look a preset up by name.
 #[must_use]
@@ -192,33 +207,36 @@ impl Machine {
     /// Load an ELF onto another board, checking every segment against its RAM.
     pub fn from_elf_on(board: &'static Board, bytes: &[u8]) -> Result<Self, String> {
         let executable = rvh_elf::parse(bytes).map_err(|error| error.to_string())?;
-        let entry = executable.entry as usize;
-        if entry >= board.ram_size {
+        // Every address is checked against the board's window, not against a
+        // zero-based RAM: a board may start anywhere (ADR-0019).
+        let limit = u64::from(board.ram_base) + board.ram_size as u64;
+        let fits = |addr: u64, size: u64| {
+            addr >= u64::from(board.ram_base) && addr.saturating_add(size) <= limit
+        };
+        if !fits(u64::from(executable.entry), 1) {
             return Err(format!(
-                "entry {:#010x} is outside the {} KiB of RAM on `{}`",
+                "entry {:#010x} is outside the {} KiB of RAM at {:#010x} on `{}`",
                 executable.entry,
                 board.ram_size / 1024,
+                board.ram_base,
                 board.name
             ));
         }
 
         let mut machine = Self::with_board(board);
         for segment in &executable.segments {
-            let start = segment.addr as usize;
-            let end = start
-                .checked_add(segment.mem_size as usize)
-                .ok_or_else(|| {
-                    format!("segment at {:#010x} has an impossible size", segment.addr)
-                })?;
-            if end > board.ram_size {
+            let address = u64::from(segment.addr);
+            if !fits(address, u64::from(segment.mem_size)) {
                 return Err(format!(
-                    "segment at {:#010x}..{:#010x} does not fit in {} KiB of RAM on `{}`",
+                    "segment at {:#010x}..{:#010x} does not fit in {} KiB of RAM at {:#010x} on `{}`",
                     segment.addr,
-                    end,
+                    address.saturating_add(u64::from(segment.mem_size)),
                     board.ram_size / 1024,
+                    board.ram_base,
                     board.name
                 ));
             }
+            let start = (segment.addr - board.ram_base) as usize;
             machine.ram[start..start + segment.data.len()].copy_from_slice(&segment.data);
         }
         machine.pc = executable.entry;
@@ -260,7 +278,7 @@ impl Machine {
     pub fn load(&mut self, image: &Image) {
         self.pc = image.entry;
         for section in &image.sections {
-            let start = section.addr as usize;
+            let start = section.addr.saturating_sub(self.board.ram_base) as usize;
             let end = start + section.data.len();
             if end > self.ram.len() {
                 self.ram.resize(end, 0);
@@ -521,11 +539,17 @@ impl Machine {
         true
     }
 
+    /// The RAM offset of `addr`, or `None` when it is outside this board.
+    fn offset(&self, addr: u32) -> Option<usize> {
+        let offset = addr.checked_sub(self.board.ram_base)? as usize;
+        (offset < self.ram.len()).then_some(offset)
+    }
+
     fn read_byte(&self, addr: u32) -> Option<u8> {
         if addr == self.board.console {
             return Some(0);
         }
-        self.ram.get(addr as usize).copied()
+        self.ram.get(self.offset(addr)?).copied()
     }
 
     fn write_byte(&mut self, addr: u32, value: u8, changes: &mut Vec<Change>) -> bool {
@@ -533,7 +557,10 @@ impl Machine {
             self.output.push(value);
             return true;
         }
-        match self.ram.get_mut(addr as usize) {
+        match self
+            .offset(addr)
+            .and_then(|offset| self.ram.get_mut(offset))
+        {
             Some(slot) => {
                 if *slot != value {
                     changes.push(Change::Mem { addr, old: *slot });
@@ -1672,6 +1699,7 @@ mod board_tests {
 
     static CUSTOM: Board = Board {
         name: "custom",
+        ram_base: 0,
         ram_size: 0x40,
         console: 0x20,
         stack_top: 0x30,
@@ -1828,5 +1856,57 @@ mod fcsr_tests {
         assert_eq!(machine.reg(10), 0x23);
         assert_eq!(machine.reg(11), 1, "fcsr >> 5");
         assert_eq!(machine.reg(12), 3, "fcsr & 0x1f");
+    }
+}
+
+#[cfg(test)]
+mod spike_board_tests {
+    use super::*;
+
+    /// `addi a0, zero, 42; ebreak`
+    const CODE: [u8; 8] = [0x13, 0x05, 0xa0, 0x02, 0x73, 0x00, 0x10, 0x00];
+
+    fn sample(entry: u32, addr: u32, code: &[u8]) -> Vec<u8> {
+        let mut bytes = vec![0u8; 52 + 32];
+        bytes[..4].copy_from_slice(&[0x7f, b'E', b'L', b'F']);
+        bytes[4] = 1;
+        bytes[5] = 1;
+        bytes[6] = 1;
+        bytes[16..18].copy_from_slice(&2u16.to_le_bytes());
+        bytes[18..20].copy_from_slice(&243u16.to_le_bytes());
+        bytes[24..28].copy_from_slice(&entry.to_le_bytes());
+        bytes[28..32].copy_from_slice(&52u32.to_le_bytes());
+        bytes[42..44].copy_from_slice(&32u16.to_le_bytes());
+        bytes[44..46].copy_from_slice(&1u16.to_le_bytes());
+        bytes[52..56].copy_from_slice(&1u32.to_le_bytes());
+        bytes[56..60].copy_from_slice(&84u32.to_le_bytes());
+        bytes[60..64].copy_from_slice(&addr.to_le_bytes());
+        bytes[64..68].copy_from_slice(&addr.to_le_bytes());
+        bytes[68..72].copy_from_slice(&(code.len() as u32).to_le_bytes());
+        bytes[72..76].copy_from_slice(&(code.len() as u32).to_le_bytes());
+        bytes[76..80].copy_from_slice(&5u32.to_le_bytes());
+        bytes.extend_from_slice(code);
+        bytes
+    }
+
+    #[test]
+    fn the_spike_board_starts_at_eight_gigabytes() {
+        let board = board("spike").expect("spike");
+        assert_eq!(board.ram_base, 0x8000_0000);
+        assert_eq!(board.ram_size, 0x10_0000);
+        assert_eq!(board.stack_top, 0x800f_fff0);
+    }
+
+    #[test]
+    fn an_elf_at_the_spike_base_runs_there_and_not_on_generic() {
+        let elf = sample(0x8000_0000, 0x8000_0000, &CODE);
+        let mut machine =
+            Machine::from_elf_on(board("spike").expect("spike"), &elf).expect("loads");
+        machine.run(10);
+        assert_eq!(machine.reg(10), 42);
+
+        let error = Machine::from_elf_on(board("generic").expect("generic"), &elf)
+            .expect_err("outside the generic window");
+        assert!(error.contains("outside"), "{error}");
     }
 }

@@ -92,6 +92,13 @@ adapter and a browser playground, all over one assembler and one simulator.
   one register. Arithmetic still rounds to nearest even, because the host `f32`
   cannot do otherwise.
 
+#### Boards
+
+- A `spike` preset puts RAM at `0x8000_0000`, so one ELF runs in both `rvh` and
+  spike. Boards gained a `ram_base`, and every access — fetch, load, store, ELF
+  segments — is checked against the board's window instead of a zero-based RAM
+  (ADR-0019).
+
 #### RV32D
 
 - The 25 double-precision instructions: `fld`/`fsd`, arithmetic, symmetric sign

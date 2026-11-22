@@ -50,6 +50,11 @@ two bytes first, decodes a compressed word when the low bits are not `11`, and
 steps by two (ADR-0018). `009_compressed.s` declares the extension with
 `.attribute arch` and runs without a flag.
 
+`--board spike` puts RAM at `0x8000_0000`, the map spike boots with, so the same
+ELF runs in both simulators. It is 1 MiB rather than spike's 2 GiB, and the
+console is not shared: a program that prints is not a candidate for comparison.
+A program linked for the spike map also needs `tohost` if spike is to stop.
+
 `--board` selects the memory map: `generic` (256 KiB of RAM at 0, the console at
 `0x1000_0000`, `sp` at `0x3_fff0`) or `tiny` (16 KiB, `sp` at `0x3ff0`). The
 presets live in `rvh-sim`; an unknown name lists the ones that exist.
