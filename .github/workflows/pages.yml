@@ -25,13 +25,14 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
       - name: Build the wasm core
         run: |
+          mkdir -p web/public
           cargo build -p rvh-wasm --target wasm32-unknown-unknown --release
           cp target/wasm32-unknown-unknown/release/rvh_wasm.wasm web/public/rvh_wasm.wasm
       - name: Install and check the web app

@@ -16,7 +16,6 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
       - run: ./xtask/lsp-smoke.sh
-      - run: ./xtask/verify-elf.sh
 
   codegen:
     runs-on: ubuntu-latest
@@ -56,7 +55,7 @@ jobs:
           targets: wasm32-unknown-unknown
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -71,8 +70,11 @@ jobs:
         if: always()
         with:
           name: playground-screenshot
-          path: docs/images/playground.png
+          path: assets/playground.png
+          if-no-files-found: ignore
 
+  # The differential checks need binutils built for RISC-V, which a stock runner
+  # does not ship, so they live in a job that installs it.
   differential:
     runs-on: ubuntu-latest
     steps:
@@ -80,3 +82,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: sudo apt-get update && sudo apt-get install -y binutils-riscv64-linux-gnu
       - run: ./xtask/verify-asm.sh
+      - run: ./xtask/verify-elf.sh

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "wasm": "cargo build -p rvh-wasm --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/rvh_wasm.wasm web/public/rvh_wasm.wasm",
+    "wasm": "mkdir -p web/public && cargo build -p rvh-wasm --target wasm32-unknown-unknown --release && cp target/wasm32-unknown-unknown/release/rvh_wasm.wasm web/public/rvh_wasm.wasm",
     "dev": "pnpm --dir web dev",
     "check": "pnpm --dir web check"
   },

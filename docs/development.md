@@ -115,4 +115,6 @@ settings and the reasons behind them are in
 ## Commits
 
 Messages follow Conventional Commits. `CHANGELOG.md` keeps the user-facing
-summary; the commit body says what changed and why.
+summary; the commit body says what changed and why. A published commit is never
+rewritten: a fix goes on top, so the history a reader can fetch stays the history
+they had.
