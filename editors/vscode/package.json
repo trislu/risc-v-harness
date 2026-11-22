@@ -3,7 +3,7 @@
   "displayName": "RISC-V Harness",
   "description": "Language server and debugger for RISC-V assembly: hover, quick fixes, completion and instruction-level stepping.",
   "version": "0.1.0",
-  "publisher": "risc-v-harness",
+  "publisher": "k19",
   "license": "MIT OR Apache-2.0",
   "engines": {
     "vscode": "^1.85.0"

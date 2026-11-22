@@ -75,3 +75,40 @@ jobs:
           name: vsix-${{ matrix.target }}
           path: target/vsix/*.vsix
           if-no-files-found: error
+
+  # One publish call for all six packages: each manifest already records
+  # TargetPlatform, so vsce attaches them to the same version and the
+  # Marketplace serves whichever matches the client.
+  publish:
+    name: publish
+    needs: package
+    # A dispatch of a branch build must not publish; only a tag release does.
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    # Trusted Publishing: the job exchanges this OIDC token for a short-lived
+    # Marketplace credential, so no personal access token is stored.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: vsix-*
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # --oidc and variadic --packagePath need vsce 4.1 or newer.
+      - name: Publish
+        run: |
+          shopt -s nullglob
+          packages=(artifacts/vsix-*/*.vsix)
+          if [ "${#packages[@]}" -eq 0 ]; then
+            echo "no VSIX to publish" >&2
+            exit 1
+          fi
+          echo "publishing ${#packages[@]} package(s) as $GITHUB_REF_NAME"
+          npx --yes @vscode/vsce@latest publish \
+            --oidc --skip-duplicate --packagePath "${packages[@]}"

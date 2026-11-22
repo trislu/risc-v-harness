@@ -219,6 +219,13 @@ cargo xtask package-vsix linux-x64 --binary target/release/rvh
 binary is already staged. CI builds the whole matrix on a tag
 (`.github/workflows/vsix.yml`); each job uploads one `vsix-<target>` artifact.
 
+A tag also publishes. The `publish` job downloads the six archives and calls
+`vsce publish --oidc --packagePath …` once, so every target lands on the same
+version under one extension id; a branch build publishes nothing. It
+authenticates through a Trusted Publishing policy for the `k19` publisher and
+this workflow instead of a stored token, which is also where the Marketplace is
+heading: global personal access tokens in Azure DevOps retire on 2026-12-01.
+
 ## Playground
 
 The playground is deployed at <https://trislu.github.io/risc-v-harness/>; it needs
