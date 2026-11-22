@@ -179,11 +179,13 @@ adapter and a browser playground, all over one assembler and one simulator.
 
 ### Limits
 
-- The C, F and D extensions are not implemented; `rv64i` and `rv64e` are named but
-  rejected rather than silently run as 32-bit ([ADR-0012](docs/adr/0012-one-base-rv32i.md)).
-- `.insn` is not implemented. Vendor extensions are data (`isa/x*.toml`), with no
-  runtime plugin ([ADR-0013](docs/adr/0013-vendor-extensions.md)).
+- One base, 32 bits: `rv64i` and `rv64e` are named but rejected rather than
+  silently run as 32-bit ([ADR-0012](docs/adr/0012-one-base-rv32i.md)). The Q
+  extension is not implemented.
 - No syscalls beyond the MMIO console; no pipeline or cycle model; one hart.
+- `mstatus.FS` gates the floating-point state, but `mstatus.FS`/`fcsr` model only
+  the `NX`, `DZ` and `NV` flags. Arithmetic rounds to nearest even: directed
+  rounding applies to the conversions only.
 - No upstream ISA importer yet: `isa/` is hand-written from the specification.
 - No DWARF. The debug adapter has source maps for code this assembler produced;
   binaries from other toolchains can run but not show source
