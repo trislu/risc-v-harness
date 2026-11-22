@@ -47,7 +47,9 @@ spike binary; point `RVH_SPIKE` at one, or have `spike` in `PATH`:
 RVH_SPIKE=~/.local/spike/bin/spike ./xtask/verify-trace.sh
 ```
 
-The fixtures link at `0x80000000` (the `spike` board preset), end with a `tohost`
+Six fixtures cover integer arithmetic, multiply and divide, compressed, atomics,
+single and double precision. The fixtures link at `0x80000000` (the `spike` board
+preset), end with a `tohost`
 write that stops spike, and avoid the console. Two things the comparison taught
 us and the fixtures now carry:
 

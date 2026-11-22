@@ -594,14 +594,7 @@ impl Machine {
                     index += 1;
                 }
                 Change::FReg { index: reg, .. } => {
-                    // A NaN-boxed single prints as its 32-bit value, as spike does;
-                    // a double needs all 64 bits.
-                    let bits = self.freg(usize::from(reg));
-                    if bits >> 32 == 0xffff_ffff {
-                        line.push_str(&format!(" f{reg}=0x{:08x}", bits as u32));
-                    } else {
-                        line.push_str(&format!(" f{reg}=0x{bits:016x}"));
-                    }
+                    line.push_str(&format!(" f{reg}=0x{:016x}", self.freg(usize::from(reg))));
                     index += 1;
                 }
                 Change::Mem { addr, .. } => {
@@ -1256,7 +1249,8 @@ impl Machine {
                 }
             }
             "fcvt.s.w" | "fcvt.s.wu" | "fcvt.d.w" | "fcvt.d.wu" => {
-                let double = insn.mnemonic.ends_with(".d");
+                // The destination decides the width: `fcvt.d.w` ends in `.w`.
+                let double = insn.mnemonic.starts_with("fcvt.d");
                 let unsigned = insn.mnemonic.contains("wu");
                 let (exact, value) = if unsigned {
                     (i64::from(a), f64::from(a))
@@ -2036,11 +2030,11 @@ mod trace_tests {
     }
 
     #[test]
-    fn a_boxed_single_prints_its_32_bits() {
+    fn a_float_write_prints_sixteen_digits() {
         let mut machine = machine_with("rv32if", "li t0, 0x3fc00000\nfmv.w.x f0, t0\nebreak\n");
         machine.step();
         machine.step();
         let line = machine.describe_step(machine.trace().last().expect("step"));
-        assert!(line.contains("f0=0x3fc00000"), "{line}");
+        assert!(line.contains("f0=0xffffffff3fc00000"), "{line}");
     }
 }

@@ -36,6 +36,15 @@ function norm(text) {
     sub(/^0x$/, "0x0", text)
     return text
 }
+# Spike prints a single-precision result as 32 bits and a boxed one as 64;
+# compare the low half when the value is NaN-boxed.
+function normf(text) {
+    text = norm(text)
+    if (text ~ /^0xffffffff[0-9a-f]+$/ && length(text) > 10) {
+        text = "0x" substr(text, 11)
+    }
+    return text
+}
 '
 
 # `core   0: 3 <pc> (<word>) x5  0x… mem 0x… 0x…` becomes
@@ -48,7 +57,8 @@ spike_to_trace() {
             line = norm($4) " " norm(word)
             i = 6
             while (i <= NF) {
-                if ($i ~ /^[xf][0-9]+$/) { line = line " " $i "=" norm($(i + 1)); i += 2 }
+                if ($i ~ /^f[0-9]+$/) { line = line " " $i "=" normf($(i + 1)); i += 2 }
+                else if ($i ~ /^x[0-9]+$/) { line = line " " $i "=" norm($(i + 1)); i += 2 }
                 else if ($i == "mem" && i + 2 <= NF && $(i + 2) ~ /^0x/) { line = line " mem[" norm($(i + 1)) "]=" norm($(i + 2)); i += 3 }
                 else if ($i == "mem") { i += 2 }
                 else { i += 1 }
@@ -64,7 +74,8 @@ ours_to_trace() {
             line = norm($1) " " norm($2)
             for (i = 3; i <= NF; i++) {
                 split($i, pair, "=")
-                line = line " " pair[1] "=" norm(pair[2])
+                if (pair[1] ~ /^f[0-9]+$/) line = line " " pair[1] "=" normf(pair[2])
+                else line = line " " pair[1] "=" norm(pair[2])
             }
             print line
         }' -
@@ -193,6 +204,34 @@ fixture float rv32if rv32if "$base
     fle.s t6, f0, f1
     fcvt.w.s t6, f2
     fcvt.s.w f9, t6"
+
+fixture double rv32id rv32id "$base
+    li t0, 0x2000
+    csrw mstatus, t0
+    li t4, 0x80001020
+    li t5, 0x3ff80000
+    sw t5, 4(t4)
+    li t5, 0x40020000
+    sw t5, 12(t4)
+    fld f0, 0(t4)
+    fld f1, 8(t4)
+    fadd.d f2, f0, f1
+    fsub.d f3, f1, f0
+    fmul.d f4, f0, f1
+    fdiv.d f5, f1, f0
+    fsd f2, 16(t4)
+    lw t6, 20(t4)
+    fmadd.d f6, f0, f1, f0
+    fmin.d f7, f0, f1
+    fmax.d f8, f0, f1
+    feq.d t6, f0, f1
+    flt.d t6, f0, f1
+    fle.d t6, f0, f1
+    fclass.d t6, f0
+    fcvt.w.d t6, f2
+    fcvt.d.w f9, t6
+    fcvt.s.d f10, f0
+    fcvt.d.s f11, f0"
 
 echo "verify-trace: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]
