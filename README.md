@@ -50,7 +50,8 @@ stops at entry, continues to the breakpoint, then steps.
 
 ### 7. The playground
 
-The same core in a browser, for readers who do not have an editor yet.
+The same core in a browser, for readers who do not have an editor yet. It is
+deployed at <https://trislu.github.io/risc-v-harness/>; nothing to install.
 
 ![Typing mul without the M extension, applying the fix, then stepping](assets/playground.gif)
 
@@ -58,15 +59,17 @@ The same core in a browser, for readers who do not have an editor yet.
 
 Pre-release, `0.x`. What works today:
 
-- 65 instructions in RV32I, Zicsr, M and A; targets `rv32i` and `rv32e`; a file
-  declares its own target with `.attribute arch` or `.option arch`
+- 141 instructions: RV32I, Zicsr, M, A, C, F and D; a file declares its own target
+  with `.attribute arch` or `.option arch`
+- `.insn` for raw words, board presets, and a trace that agrees with spike step by
+  step (`xtask/verify-trace.sh`)
 - assembler, simulator with undo and trace, ELF reading and writing
 - language server: pull diagnostics with fixes, hover, completion, definition,
   semantic tokens; debug adapter with breakpoints and a memory view
 - VS Code extension and a Svelte playground, both over the same wasm core
 
-Not implemented yet: the C, F and D extensions, `rv64*`, `.insn`, and the upstream
-ISA importer. The [plan](docs/plan.md) keeps the full list.
+Not implemented yet: `rv64*` bases, the upstream ISA importer, and the Q
+extension. The [plan](docs/plan.md) keeps the full list.
 
 ## Quick start
 
@@ -77,7 +80,8 @@ cargo run -p rvh-cli -- lsp          # speak LSP on stdin/stdout
 pnpm install && pnpm wasm && pnpm dev   # playground at http://localhost:5173
 ```
 
-No external dependencies: every crate builds with a bare toolchain.
+No external dependencies: every crate builds with a bare toolchain. The same
+playground is hosted at <https://trislu.github.io/risc-v-harness/>.
 
 ## Where to look
 

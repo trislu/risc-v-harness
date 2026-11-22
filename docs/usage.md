@@ -123,6 +123,9 @@ pnpm --dir editors/vscode run package   # writes risc-v-harness-vscode-<version>
 
 ## Playground
 
+The playground is deployed at <https://trislu.github.io/risc-v-harness/>; it needs
+no install and no account. To run the same page from a checkout:
+
 ```bash
 pnpm install
 pnpm wasm        # build the wasm into web/public/

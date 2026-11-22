@@ -61,6 +61,10 @@ adapter and a browser playground, all over one assembler and one simulator.
 
 #### Documentation
 
+- The README links the deployed playground
+  (<https://trislu.github.io/risc-v-harness/>) and states the current instruction
+  count instead of the M2 figure.
+
 - ADR-0001 to ADR-0017, `docs/plan.md`, `docs/architecture.md`,
   `docs/usage.md`, `docs/development.md`.
 - Recorded demo captures: a diagnostic and its fix, hover, go to definition,
