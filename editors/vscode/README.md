@@ -5,7 +5,7 @@ go-to-definition from a language server that shares its parser with the
 simulator, plus a debugger that steps one instruction at a time with registers
 and memory on screen.
 
-![Debugger stopped at entry, with registers and a breakpoint in the gutter](https://raw.githubusercontent.com/trislu/risc-v-harness/master/editors/vscode/media/screenshot-debug.png)
+![Entry stop, the breakpoint, then one step with registers updating](https://raw.githubusercontent.com/trislu/risc-v-harness/master/assets/demos/debug.gif)
 
 ## Features
 
@@ -17,20 +17,20 @@ and memory on screen.
 - a **Memory** view that follows `sp` or `pc` and highlights the bytes a step changed
 - per-file ISA pins, so one workspace can mix `rv32i`, `rv32im` and `rv32ia`
 
-## Screenshots
+## In action
 
-Diagnostics come with fixes: `mul` is rejected until the file enables extension
-`m`, and the fix inserts the directive that does it.
+A missing extension is a diagnostic, and the fix inserts the directive that
+enables it.
 
-![A quick fix offering to enable extension m in this file](https://raw.githubusercontent.com/trislu/risc-v-harness/master/editors/vscode/media/screenshot-fix.png)
+![A red squiggle under mul, then the quick fix inserting .option arch, +m](https://raw.githubusercontent.com/trislu/risc-v-harness/master/assets/vscode-fix.gif)
 
-Completion is filtered by position, with the instruction format as detail.
+Completion is filtered by position, and the accepted line assembles.
 
-![Typing ad, with add, addi, and and andi offered](https://raw.githubusercontent.com/trislu/risc-v-harness/master/editors/vscode/media/screenshot-completion.png)
+![Typing ad, the completion list, then the accepted line](https://raw.githubusercontent.com/trislu/risc-v-harness/master/assets/demos/completion.gif)
 
-A workspace can mix ISAs: the target is pinned per file from the status bar item.
+A workspace can mix ISAs: the target is pinned per file from the command palette.
 
-![The RISC-V target picker listing rv32i, rv32i_zicsr and the workspace default](https://raw.githubusercontent.com/trislu/risc-v-harness/master/editors/vscode/media/screenshot-target.png)
+![The command palette, then the target quick pick](https://raw.githubusercontent.com/trislu/risc-v-harness/master/assets/demos/target.gif)
 
 The extension ships the `rvh` binary for its own platform and architecture, so
 there is nothing else to install.
