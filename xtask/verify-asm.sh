@@ -261,5 +261,48 @@ else
     fail=$((fail + 1))
 fi
 
+# RV32D: the double-precision instructions.
+cat >"$work/d.s" <<'EOF'
+    .text
+    .globl _start
+_start:
+    fld f0, 0(t0)
+    fsd f1, 8(t0)
+    fadd.d f2, f0, f1
+    fsub.d f3, f0, f1
+    fmul.d f4, f0, f1
+    fdiv.d f5, f0, f1
+    fsgnj.d f6, f0, f1
+    fsgnjn.d f7, f0, f1
+    fsgnjx.d f8, f0, f1
+    fmin.d f9, f0, f1
+    fmax.d f10, f0, f1
+    feq.d a0, f0, f1
+    flt.d a1, f0, f1
+    fle.d a2, f0, f1
+    fclass.d a3, f0
+    fcvt.w.d a4, f0
+    fcvt.wu.d a5, f0
+    fcvt.d.w f11, a0
+    fcvt.d.wu f12, a0
+    fcvt.s.d f13, f0
+    fcvt.d.s f14, f0
+    fmadd.d f15, f0, f1, f2
+    fmsub.d f16, f0, f1, f2
+    fnmsub.d f17, f0, f1, f2
+    fnmadd.d f18, f0, f1, f2
+    ebreak
+EOF
+riscv64-linux-gnu-as -march=rv32id -mabi=ilp32d -o "$work/d.o" "$work/d.s"
+riscv64-linux-gnu-ld -m elf32lriscv -Ttext=0 --no-relax -o "$work/d.elf" "$work/d.o"
+riscv64-linux-gnu-objcopy -O binary -j .text "$work/d.elf" "$work/d.gnu.bin"
+"$rvh" asm "$work/d.s" --target rv32id --text "$work/d.ours.bin" >/dev/null
+if cmp -s "$work/d.gnu.bin" "$work/d.ours.bin"; then
+    pass=$((pass + 1))
+else
+    echo "BYTES-DIFF rv32d: our .text differs from GNU as + ld"
+    fail=$((fail + 1))
+fi
+
 echo "verify-asm: $pass passed, $fail failed"
 [ "$fail" -eq 0 ]

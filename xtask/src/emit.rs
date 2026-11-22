@@ -36,6 +36,7 @@ fn render_insn(out: &mut String, insn: &Insn) {
     out.push_str(&format!("        funct6: {},\n", opt_bits(insn.funct6, 6)));
     out.push_str(&format!("        funct4: {},\n", opt_bits(insn.funct4, 4)));
     out.push_str(&format!("        funct2: {},\n", opt_bits(insn.funct2, 2)));
+    out.push_str(&format!("        fmt: {},\n", opt_bits(insn.fmt, 2)));
     out.push_str(&format!("        imm12: {},\n", opt_bits(insn.imm12, 12)));
     out.push_str(&format!("        class: {:?},\n", insn.class));
     if insn.operands.is_empty() {

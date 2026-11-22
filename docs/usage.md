@@ -28,6 +28,12 @@ rvh dap                              # DAP on stdin/stdout
 vendor instruction whose encoding is known but whose semantics are not; the
 simulator runs it only when the word happens to decode as an instruction it knows.
 
+`--target rv32id` adds the 25 RV32D instructions: `fld`/`fsd`, the same arithmetic,
+sign injection, comparisons, `fclass` and conversions with a `d` suffix, and the
+fused forms with `fmt` 1. The floating-point registers are 64 bits wide, so a
+double fills one; a single is stored NaN-boxed in the low half (ADR-0019), which
+is also the shape RV64 will use.
+
 `--target rv32if` assembles and runs all 25 RV32F instructions: loads and stores,
 the four arithmetic operations, the fused multiply-add family, `fsgnj`/`fsgnjn`/
 `fsgnjx`, `fmin`/`fmax`, the three comparisons, `fclass`, the four conversions,
@@ -128,6 +134,7 @@ step, run and undo. The README animation is recorded from this page by
 | 008 | [008_rv32e.s](../tests/corpus/008_rv32e.s) | the embedded base |
 | 009 | [009_compressed.s](../tests/corpus/009_compressed.s) | the compressed extension |
 | 010 | [010_float.s](../tests/corpus/010_float.s) | floating point registers |
+| 011 | [011_double.s](../tests/corpus/011_double.s) | double precision registers |
 
 `tests/corpus/README.md` records the numbering rules.
 

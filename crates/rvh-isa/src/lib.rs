@@ -305,6 +305,8 @@ pub struct Insn {
     pub funct4: Option<u8>,
     /// `funct2`, at bits 6:5 in CA and at bits 12:10 in CB.
     pub funct2: Option<u8>,
+    /// `fmt` of the R4 layout (bits 26:25): 0 single, 1 double.
+    pub fmt: Option<u8>,
     /// A fixed value in the 12-bit immediate field (system instructions).
     pub imm12: Option<u16>,
     /// Semantic class, used to group content and explanation templates.
@@ -338,6 +340,10 @@ impl Insn {
         if let Some(funct4) = self.funct4 {
             bits |= u32::from(funct4) << 12;
             mask |= 0xf << 12;
+        }
+        if let Some(fmt) = self.fmt {
+            bits |= u32::from(fmt) << 25;
+            mask |= 0x3 << 25;
         }
         if let Some(funct2) = self.funct2 {
             // CA keeps `funct2` at 6:5; CB keeps it at 12:10.
@@ -424,10 +430,10 @@ mod tests {
     fn table_is_complete() {
         assert_eq!(
             all().len(),
-            116,
-            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 25 RV32F instructions"
+            141,
+            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C, 25 RV32F and 25 RV32D instructions"
         );
-        assert_eq!(extensions(), vec!["a", "c", "f", "i", "m", "zicsr"]);
+        assert_eq!(extensions(), vec!["a", "c", "d", "f", "i", "m", "zicsr"]);
     }
 
     #[test]

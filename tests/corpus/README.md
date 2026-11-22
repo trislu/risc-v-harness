@@ -21,6 +21,7 @@ teaching sequence first and the negative cases last.
 | 008 | [008_rv32e.s](008_rv32e.s) | the embedded base: same instructions, 16 registers |
 | 009 | [009_compressed.s](009_compressed.s) | the compressed extension: two-byte instructions |
 | 010 | [010_float.s](010_float.s) | floating point: a second register file |
+| 011 | [011_double.s](011_double.s) | double precision: 64-bit float registers |
 | 900 | [900_error_missing_comma.s](900_error_missing_comma.s) | a missing comma, with a fix |
 | 901 | [901_error_stray_token.s](901_error_stray_token.s) | per-line recovery after a stray token |
 | 902 | [902_error_common_mistakes.s](902_error_common_mistakes.s) | did-you-mean, immediate range, CSR spelling, `;` as a comment |

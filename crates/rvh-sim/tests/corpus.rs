@@ -88,6 +88,15 @@ fn a_file_that_declares_its_target_uses_it() {
 }
 
 #[test]
+fn the_double_registers_hold_sixty_four_bits() {
+    // 1.5 + 2.25 = 3.75 and 1.5 * 2.25 + 1.5 = 4.875, read back as halves.
+    let machine = run("011_double.s");
+    assert_eq!(machine.reg(10), 0x400e_0000);
+    assert_eq!(machine.reg(11), 0x4013_8000);
+    assert_eq!(machine.reg(12), 4);
+}
+
+#[test]
 fn the_float_registers_carry_their_bit_patterns() {
     // 1.5 + 2.25 = 3.75 and 2.25 - 1.5 = 0.75, read back through `fmv.x.w`.
     let machine = run("010_float.s");

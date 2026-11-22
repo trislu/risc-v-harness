@@ -1,0 +1,274 @@
+SourceFile
+  Line
+    Comment "# Double precision: 64-bit float registers. A double occupies a whole register,"
+    NL "\n"
+  Line
+    Comment "# so the halves are written and read as two words to keep the arithmetic visible."
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".attribute"
+      WS " "
+      Op
+        Ident "arch"
+      Comma ","
+      WS " "
+      Op
+        String "\"rv32i2p1_f2p0_d2p0\""
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".text"
+    NL "\n"
+  Line
+    WS "    "
+    Dir
+      DirName ".globl"
+      WS " "
+      Op
+        Ident "_start"
+    NL "\n"
+  Line
+    Label
+      Ident "_start"
+      Colon ":"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t0"
+      Comma ","
+      WS " "
+      Op
+        Number "0x100"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0x3ff80000"
+      WS "         "
+    Comment "# high half of 1.5"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sw"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "4"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "li"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "0x40020000"
+      WS "         "
+    Comment "# high half of 2.25"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "sw"
+      WS " "
+      Op
+        Ident "t1"
+      Comma ","
+      WS " "
+      Op
+        Number "12"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fld"
+      WS " "
+      Op
+        Ident "f0"
+      Comma ","
+      WS " "
+      Op
+        Number "0"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fld"
+      WS " "
+      Op
+        Ident "f1"
+      Comma ","
+      WS " "
+      Op
+        Number "8"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fadd.d"
+      WS " "
+      Op
+        Ident "f2"
+      Comma ","
+      WS " "
+      Op
+        Ident "f0"
+      Comma ","
+      WS " "
+      Op
+        Ident "f1"
+      WS "         "
+    Comment "# 3.75"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fsd"
+      WS " "
+      Op
+        Ident "f2"
+      Comma ","
+      WS " "
+      Op
+        Number "16"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "lw"
+      WS " "
+      Op
+        Ident "a0"
+      Comma ","
+      WS " "
+      Op
+        Number "20"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+      WS "             "
+    Comment "# high half of the sum"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmadd.d"
+      WS " "
+      Op
+        Ident "f3"
+      Comma ","
+      WS " "
+      Op
+        Ident "f0"
+      Comma ","
+      WS " "
+      Op
+        Ident "f1"
+      Comma ","
+      WS " "
+      Op
+        Ident "f0"
+      WS "    "
+    Comment "# 1.5 * 2.25 + 1.5 = 4.875"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fsd"
+      WS " "
+      Op
+        Ident "f3"
+      Comma ","
+      WS " "
+      Op
+        Number "24"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "lw"
+      WS " "
+      Op
+        Ident "a1"
+      Comma ","
+      WS " "
+      Op
+        Number "28"
+        LParen "("
+        Ident "t0"
+        RParen ")"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fcvt.w.d"
+      WS " "
+      Op
+        Ident "a2"
+      Comma ","
+      WS " "
+      Op
+        Ident "f2"
+      WS "           "
+    Comment "# 3.75 rounds to 4"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "fmv.w.x"
+      WS " "
+      Op
+        Ident "f4"
+      Comma ","
+      WS " "
+      Op
+        Ident "a2"
+      WS "            "
+    Comment "# a single goes into the low half, boxed"
+    NL "\n"
+  Line
+    WS "    "
+    Insn
+      Ident "ebreak"
+    NL "\n"
+---
+diagnostics: none

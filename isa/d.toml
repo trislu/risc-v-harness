@@ -1,0 +1,282 @@
+# RV32D: double precision. The registers are 64 bits wide, so a double needs no
+# boxing; a single is stored in the low half with the upper half all ones.
+
+
+[[insn]]
+id = "fld"
+mnemonic = "fld"
+ext = "d"
+format = "I"
+opcode = 0b0000111
+funct3 = 0b011
+class = "load"
+operands = ["frd:fr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "fsd"
+mnemonic = "fsd"
+ext = "d"
+format = "S"
+opcode = 0b0100111
+funct3 = 0b011
+class = "store"
+operands = ["frs2:fr", "rs1:gpr", "imm:12:s"]
+
+[[insn]]
+id = "fadd-d"
+mnemonic = "fadd.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0000001
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsub-d"
+mnemonic = "fsub.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0000101
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmul-d"
+mnemonic = "fmul.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0001001
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fdiv-d"
+mnemonic = "fdiv.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0001101
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsgnj-d"
+mnemonic = "fsgnj.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b0010001
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsgnjn-d"
+mnemonic = "fsgnjn.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b0010001
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsgnjx-d"
+mnemonic = "fsgnjx.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b010
+funct7 = 0b0010001
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmin-d"
+mnemonic = "fmin.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b0010101
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmax-d"
+mnemonic = "fmax.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b0010101
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "feq-d"
+mnemonic = "feq.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b010
+funct7 = 0b1010001
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "flt-d"
+mnemonic = "flt.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b1010001
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fle-d"
+mnemonic = "fle.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1010001
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fclass-d"
+mnemonic = "fclass.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b1110001
+class = "compare"
+operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-w-d"
+mnemonic = "fcvt.w.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1100001
+funct5 = 0b00000
+class = "convert"
+operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-wu-d"
+mnemonic = "fcvt.wu.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1100001
+funct5 = 0b00001
+class = "convert"
+operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-d-w"
+mnemonic = "fcvt.d.w"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1101001
+funct5 = 0b00000
+class = "convert"
+operands = ["frd:fr", "rs1:gpr"]
+
+[[insn]]
+id = "fcvt-d-wu"
+mnemonic = "fcvt.d.wu"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1101001
+funct5 = 0b00001
+class = "convert"
+operands = ["frd:fr", "rs1:gpr"]
+
+[[insn]]
+id = "fcvt-s-d"
+mnemonic = "fcvt.s.d"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b0100000
+funct5 = 0b00001
+class = "convert"
+operands = ["frd:fr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-d-s"
+mnemonic = "fcvt.d.s"
+ext = "d"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b0100001
+funct5 = 0b00000
+class = "convert"
+operands = ["frd:fr", "frs1:fr"]
+
+[[insn]]
+id = "fmadd-d"
+mnemonic = "fmadd.d"
+ext = "d"
+format = "R4"
+opcode = 0b1000011
+funct3 = 0b111
+fmt = 1
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fmsub-d"
+mnemonic = "fmsub.d"
+ext = "d"
+format = "R4"
+opcode = 0b1000111
+funct3 = 0b111
+fmt = 1
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fnmsub-d"
+mnemonic = "fnmsub.d"
+ext = "d"
+format = "R4"
+opcode = 0b1001011
+funct3 = 0b111
+fmt = 1
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]
+
+[[insn]]
+id = "fnmadd-d"
+mnemonic = "fnmadd.d"
+ext = "d"
+format = "R4"
+opcode = 0b1001111
+funct3 = 0b111
+fmt = 1
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr", "frs3:fr"]

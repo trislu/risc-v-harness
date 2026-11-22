@@ -91,7 +91,20 @@ adapter and a browser playground, all over one assembler and one simulator.
   sticky `NX`, `DZ` and `NV` bits. `fflags`, `frm` and `fcsr` are three views of
   one register. Arithmetic still rounds to nearest even, because the host `f32`
   cannot do otherwise.
-- Not yet: the D extension. The encodings
+
+#### RV32D
+
+- The 25 double-precision instructions: `fld`/`fsd`, arithmetic, symmetric sign
+  injection, `fmin`/`fmax`, comparisons, `fclass`, the conversions (including
+  `fcvt.s.d` and `fcvt.d.s`) and the fused forms with `fmt` 1. All byte-identical
+  to `as -march=rv32id`.
+- The floating-point file is 64 bits wide with NaN-boxing for singles, which the
+  conversions and `fclass` read at their own width. This is also the layout RV64
+  will use (ADR-0019).
+- A measurement worth keeping: for `fcvt.s.w` GNU emits the dynamic rounding
+  field, but for `fcvt.d.w` and `fcvt.d.s` it emits 0, so the table matches the
+  toolchain bit for bit.
+- Not yet: `fmv.x.d`/`fmv.d.x` are RV64-only; Q; and the trace diff against spike. The encodings
   use the dynamic-rounding field, which the simulator treats as
   round-to-nearest-even.
 

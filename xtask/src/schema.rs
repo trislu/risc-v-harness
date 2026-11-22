@@ -10,7 +10,7 @@ use std::path::Path;
 /// Every key an `[[insn]]` record may carry.
 pub const FIELDS: &[&str] = &[
     "id", "mnemonic", "ext", "format", "opcode", "funct3", "funct7", "funct5", "funct6", "funct4",
-    "funct2", "imm12", "class", "operands",
+    "funct2", "fmt", "imm12", "class", "operands",
 ];
 
 const FORMATS: &[&str] = &[
@@ -61,6 +61,8 @@ pub struct Insn {
     pub funct6: Option<u32>,
     pub funct4: Option<u32>,
     pub funct2: Option<u32>,
+    /// `fmt` of the R4 layout: 0 for single precision, 1 for double.
+    pub fmt: Option<u32>,
     pub imm12: Option<u32>,
     pub class: String,
     pub operands: Vec<Operand>,
@@ -81,6 +83,7 @@ struct Raw {
     funct6: Option<u32>,
     funct4: Option<u32>,
     funct2: Option<u32>,
+    fmt: Option<u32>,
     imm12: Option<u32>,
     class: Option<String>,
     operands: Option<Vec<String>>,
@@ -186,6 +189,7 @@ fn assign(file: &str, line: usize, rec: &mut Raw, key: &str, value: &str) -> Res
         "funct6" => set_int(file, line, &mut rec.funct6, key, value),
         "funct4" => set_int(file, line, &mut rec.funct4, key, value),
         "funct2" => set_int(file, line, &mut rec.funct2, key, value),
+        "fmt" => set_int(file, line, &mut rec.fmt, key, value),
         "imm12" => set_int(file, line, &mut rec.imm12, key, value),
         "operands" => {
             if rec.operands.is_some() {
@@ -495,6 +499,7 @@ fn finish(file: &str, raw: Raw) -> Result<Insn, Error> {
         funct6: raw.funct6,
         funct4: raw.funct4,
         funct2: raw.funct2,
+        fmt: raw.fmt,
         imm12: raw.imm12,
         class,
         operands: parsed,

@@ -67,7 +67,7 @@ pub const TRACE_LIMIT: usize = 100_000;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Change {
     Reg { index: u8, old: u32 },
-    FReg { index: u8, old: u32 },
+    FReg { index: u8, old: u64 },
     Mem { addr: u32, old: u8 },
 }
 
@@ -101,6 +101,18 @@ impl Rounding {
             3 => Self::Up,
             4 => Self::NearestAway,
             _ => Self::NearestEven,
+        }
+    }
+
+    /// Round a double to an integer value, still as a double.
+    #[must_use]
+    pub fn round64(self, value: f64) -> f64 {
+        match self {
+            Self::NearestEven => value.round_ties_even(),
+            Self::Zero => value.trunc(),
+            Self::Down => value.floor(),
+            Self::Up => value.ceil(),
+            Self::NearestAway => (value + value.signum() * 0.5).trunc(),
         }
     }
 
@@ -145,8 +157,9 @@ pub struct Machine {
     pc: u32,
     regs: [u32; 32],
     ram: Vec<u8>,
-    /// Floating-point registers, held as their 32-bit patterns.
-    fregs: [u32; 32],
+    /// Floating-point registers. RV32D needs 64 bits, and a single-precision
+    /// value is stored NaN-boxed (ADR-0019).
+    fregs: [u64; 32],
     /// `fcsr`: `frm` in bits 7:5, `fflags` in bits 4:0.
     fcsr: u32,
     csrs: Vec<u32>,
@@ -261,10 +274,34 @@ impl Machine {
         self.pc
     }
 
-    /// A floating-point register as its 32-bit pattern.
+    /// A floating-point register as its 64-bit pattern.
     #[must_use]
-    pub fn freg(&self, index: usize) -> u32 {
+    pub fn freg(&self, index: usize) -> u64 {
         self.fregs.get(index).copied().unwrap_or(0)
+    }
+
+    /// A single-precision value, unboxed the way the ISA reads it.
+    fn read_s(&self, index: usize) -> f32 {
+        let bits = self.fregs[index];
+        if bits >> 32 == 0xffff_ffff {
+            f32::from_bits(bits as u32)
+        } else {
+            // Not NaN-boxed: the register holds no valid single-precision value.
+            f32::from_bits(0x7fc0_0000)
+        }
+    }
+
+    fn read_d(&self, index: usize) -> f64 {
+        f64::from_bits(self.fregs[index])
+    }
+
+    fn write_s(&mut self, index: usize, value: f32, changes: &mut Vec<Change>) {
+        let boxed = 0xffff_ffff_0000_0000 | u64::from(value.to_bits());
+        self.write_freg(index, boxed, changes);
+    }
+
+    fn write_d(&mut self, index: usize, value: f64, changes: &mut Vec<Change>) {
+        self.write_freg(index, value.to_bits(), changes);
     }
 
     #[must_use]
@@ -458,6 +495,17 @@ impl Machine {
         Some(value)
     }
 
+    fn read_u64(&self, addr: u32) -> Option<u64> {
+        let low = self.read_value(addr, 4, false)?;
+        let high = self.read_value(addr.checked_add(4)?, 4, false)?;
+        Some(u64::from(low) | u64::from(high) << 32)
+    }
+
+    fn store_u64(&mut self, addr: u32, value: u64, changes: &mut Vec<Change>) -> bool {
+        self.store(addr, 4, value as u32, changes)
+            && self.store(addr.wrapping_add(4), 4, (value >> 32) as u32, changes)
+    }
+
     fn store(&mut self, addr: u32, size: usize, value: u32, changes: &mut Vec<Change>) -> bool {
         // A store may invalidate the reservation: `sc.w` is allowed to fail
         // spuriously, and this keeps the model simple.
@@ -497,7 +545,7 @@ impl Machine {
         }
     }
 
-    fn write_freg(&mut self, index: usize, value: u32, changes: &mut Vec<Change>) {
+    fn write_freg(&mut self, index: usize, value: u64, changes: &mut Vec<Change>) {
         // Every floating-point register is writable; only the integer x0 is not.
         if index >= 32 {
             return;
@@ -819,88 +867,151 @@ impl Machine {
 
             // RV32F, first slice: the register file holds 32-bit patterns, and
             // arithmetic goes through Rust's `f32` (NaN and infinity included).
+            "fld" => {
+                let addr = a.wrapping_add(imm_i as u32);
+                match self.read_u64(addr) {
+                    Some(bits) => self.write_d(rd, f64::from_bits(bits), changes),
+                    None => return Err(HaltReason::Fault { pc, addr }),
+                }
+            }
+            "fsd" => {
+                let addr = a.wrapping_add(imm_s(word) as u32);
+                let bits = self.fregs[rs2];
+                if !self.store_u64(addr, bits, changes) {
+                    return Err(HaltReason::Fault { pc, addr });
+                }
+            }
             "flw" => {
                 let addr = a.wrapping_add(imm_i as u32);
                 match self.read_value(addr, 4, false) {
-                    Some(bits) => self.write_freg(rd, bits, changes),
+                    Some(bits) => self.write_s(rd, f32::from_bits(bits), changes),
                     None => return Err(HaltReason::Fault { pc, addr }),
                 }
             }
             "fsw" => {
                 let addr = a.wrapping_add(imm_s(word) as u32);
-                let bits = self.fregs[rs2];
+                let bits = self.fregs[rs2] as u32;
                 if !self.store(addr, 4, bits, changes) {
                     return Err(HaltReason::Fault { pc, addr });
                 }
             }
-            "fadd.s" | "fsub.s" | "fmul.s" | "fdiv.s" => {
-                let left = f32::from_bits(self.fregs[rs1]);
-                let right = f32::from_bits(self.fregs[rs2]);
+            "fadd.s" | "fsub.s" | "fmul.s" | "fdiv.s" | "fadd.d" | "fsub.d" | "fmul.d"
+            | "fdiv.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let operation = &insn.mnemonic[..insn.mnemonic.len() - 2];
+                let (left, right) = if double {
+                    (self.read_d(rs1), self.read_d(rs2))
+                } else {
+                    (f64::from(self.read_s(rs1)), f64::from(self.read_s(rs2)))
+                };
                 // 0/0 is invalid, x/0 is divide-by-zero.
-                if insn.mnemonic == "fdiv.s" && right == 0.0 {
+                if operation == "fdiv" && right == 0.0 {
                     self.set_flag(if left == 0.0 || left.is_nan() {
                         FLAG_NV
                     } else {
                         FLAG_DZ
                     });
                 }
-                let value = match insn.mnemonic {
-                    "fadd.s" => left + right,
-                    "fsub.s" => left - right,
-                    "fmul.s" => left * right,
+                let value = match operation {
+                    "fadd" => left + right,
+                    "fsub" => left - right,
+                    "fmul" => left * right,
                     _ => left / right,
                 };
-                self.write_freg(rd, value.to_bits(), changes);
+                if double {
+                    self.write_d(rd, value, changes);
+                } else {
+                    self.write_s(rd, value as f32, changes);
+                }
             }
-            "fmadd.s" | "fmsub.s" | "fnmsub.s" | "fnmadd.s" => {
+            "fmadd.s" | "fmsub.s" | "fnmsub.s" | "fnmadd.s" | "fmadd.d" | "fmsub.d"
+            | "fnmsub.d" | "fnmadd.d" => {
                 // The fourth source sits in bits 31:27; the product and the addend
                 // round once, which is the point of the fused form.
+                let double = insn.mnemonic.ends_with(".d");
                 let rs3 = ((word >> 27) & 0x1f) as usize;
-                let left = f32::from_bits(self.fregs[rs1]);
-                let right = f32::from_bits(self.fregs[rs2]);
-                let addend = f32::from_bits(self.fregs[rs3]);
-                let value = match insn.mnemonic {
-                    "fmadd.s" => left.mul_add(right, addend),
-                    "fmsub.s" => left.mul_add(right, -addend),
-                    "fnmsub.s" => (-left).mul_add(right, addend),
-                    _ => (-left).mul_add(right, -addend),
+                let (left, right, addend) = if double {
+                    (self.read_d(rs1), self.read_d(rs2), self.read_d(rs3))
+                } else {
+                    (
+                        f64::from(self.read_s(rs1)),
+                        f64::from(self.read_s(rs2)),
+                        f64::from(self.read_s(rs3)),
+                    )
                 };
-                self.write_freg(rd, value.to_bits(), changes);
+                let subtract =
+                    insn.mnemonic.starts_with("fmsub") || insn.mnemonic.starts_with("fnmadd");
+                let negate =
+                    insn.mnemonic.starts_with("fnmsub") || insn.mnemonic.starts_with("fnmadd");
+                let start = if negate { -left } else { left };
+                let end = if subtract { -addend } else { addend };
+                let value = start.mul_add(right, end);
+                if double {
+                    self.write_d(rd, value, changes);
+                } else {
+                    self.write_s(rd, value as f32, changes);
+                }
             }
-            "fsgnj.s" | "fsgnjn.s" | "fsgnjx.s" => {
-                let left = self.fregs[rs1];
-                let right = self.fregs[rs2];
+            "fsgnj.s" | "fsgnjn.s" | "fsgnjx.s" | "fsgnj.d" | "fsgnjn.d" | "fsgnjx.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let sign_bit = if double { 1u64 << 63 } else { 1u64 << 31 };
+                let left = if double {
+                    self.fregs[rs1]
+                } else {
+                    u64::from(self.fregs[rs1] as u32)
+                };
+                let right = if double {
+                    self.fregs[rs2]
+                } else {
+                    u64::from(self.fregs[rs2] as u32)
+                };
                 let sign = match insn.mnemonic {
-                    "fsgnj.s" => right & 0x8000_0000,
-                    "fsgnjn.s" => !right & 0x8000_0000,
-                    _ => (left ^ right) & 0x8000_0000,
+                    "fsgnj.s" | "fsgnj.d" => right & sign_bit,
+                    "fsgnjn.s" | "fsgnjn.d" => !right & sign_bit,
+                    _ => (left ^ right) & sign_bit,
                 };
-                self.write_freg(rd, (left & 0x7fff_ffff) | sign, changes);
+                let value = (left & !sign_bit) | sign;
+                let value = if double {
+                    value
+                } else {
+                    0xffff_ffff_0000_0000 | (value & 0xffff_ffff)
+                };
+                self.write_freg(rd, value, changes);
             }
-            "feq.s" | "flt.s" | "fle.s" => {
-                let left = f32::from_bits(self.fregs[rs1]);
-                let right = f32::from_bits(self.fregs[rs2]);
+            "feq.s" | "flt.s" | "fle.s" | "feq.d" | "flt.d" | "fle.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let (left, right) = if double {
+                    (self.read_d(rs1), self.read_d(rs2))
+                } else {
+                    (f64::from(self.read_s(rs1)), f64::from(self.read_s(rs2)))
+                };
                 if left.is_nan() || right.is_nan() {
                     // Comparisons signal invalid on a quiet NaN operand.
                     self.set_flag(FLAG_NV);
                 }
-                let value = match insn.mnemonic {
-                    "feq.s" => left == right,
-                    "flt.s" => left < right,
+                let operation = &insn.mnemonic[..3];
+                let value = match operation {
+                    "feq" => left == right,
+                    "flt" => left < right,
                     _ => left <= right,
                 };
                 self.write_reg(rd, u32::from(value), changes);
             }
-            "fmin.s" | "fmax.s" => {
-                let left = f32::from_bits(self.fregs[rs1]);
-                let right = f32::from_bits(self.fregs[rs2]);
+            "fmin.s" | "fmax.s" | "fmin.d" | "fmax.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let minimum = insn.mnemonic.starts_with("fmin");
+                let (left, right) = if double {
+                    (self.read_d(rs1), self.read_d(rs2))
+                } else {
+                    (f64::from(self.read_s(rs1)), f64::from(self.read_s(rs2)))
+                };
                 // A NaN operand loses; two NaNs produce the canonical quiet NaN.
                 let value = match (left.is_nan(), right.is_nan()) {
-                    (true, true) => f32::NAN,
+                    (true, true) => f64::NAN,
                     (true, false) => right,
                     (false, true) => left,
                     (false, false) => {
-                        if insn.mnemonic == "fmin.s" {
+                        if minimum {
                             if left < right {
                                 left
                             } else {
@@ -913,105 +1024,161 @@ impl Machine {
                         }
                     }
                 };
-                self.write_freg(rd, value.to_bits(), changes);
+                if double {
+                    self.write_d(rd, value, changes);
+                } else {
+                    self.write_s(rd, value as f32, changes);
+                }
             }
-            "fclass.s" => {
-                let value = f32::from_bits(self.fregs[rs1]);
-                let bits = value.to_bits();
-                let negative = bits >> 31 == 1;
-                let exponent = (bits >> 23) & 0xff;
-                let mantissa = bits & 0x7f_ffff;
-                let class: u32 = if value.is_nan() {
-                    if mantissa & 0x40_0000 != 0 {
+            "fclass.s" | "fclass.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let (sign, exponent, mantissa, quiet) = if double {
+                    let bits = self.fregs[rs1];
+                    (
+                        bits >> 63 == 1,
+                        (bits >> 52) & 0x7ff,
+                        bits & 0xf_ffff_ffff_ffff,
+                        0x8_0000_0000_0000,
+                    )
+                } else {
+                    let bits = u64::from(self.fregs[rs1] as u32);
+                    (
+                        bits >> 31 == 1,
+                        (bits >> 23) & 0xff,
+                        bits & 0x7f_ffff,
+                        0x40_0000,
+                    )
+                };
+                let is_nan = if double {
+                    exponent == 0x7ff && mantissa != 0
+                } else {
+                    exponent == 0xff && mantissa != 0
+                };
+                let infinite = if double {
+                    exponent == 0x7ff
+                } else {
+                    exponent == 0xff
+                };
+                let class: u32 = if is_nan {
+                    if mantissa & quiet != 0 {
                         1 << 9
                     } else {
                         1 << 8
                     }
-                } else if value.is_infinite() {
-                    if negative {
+                } else if infinite {
+                    if sign {
                         1
                     } else {
                         1 << 7
                     }
-                } else if value == 0.0 {
-                    if negative {
+                } else if exponent == 0 && mantissa == 0 {
+                    if sign {
                         1 << 3
                     } else {
                         1 << 4
                     }
                 } else if exponent == 0 {
-                    if negative {
+                    if sign {
                         1 << 2
                     } else {
                         1 << 5
                     }
-                } else if negative {
+                } else if sign {
                     1 << 1
                 } else {
                     1 << 6
                 };
                 self.write_reg(rd, class, changes);
             }
-            "fcvt.w.s" | "fcvt.wu.s" => {
-                let value = f32::from_bits(self.fregs[rs1]);
+            "fcvt.w.s" | "fcvt.wu.s" | "fcvt.w.d" | "fcvt.wu.d" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let value = if double {
+                    self.read_d(rs1)
+                } else {
+                    f64::from(self.read_s(rs1))
+                };
                 let mode = self.rounding(funct3);
+                let unsigned = insn.mnemonic.contains("wu");
                 if value.is_nan() {
                     // Invalid: the result saturates at the largest integer.
                     self.set_flag(FLAG_NV);
-                    let bits = if insn.mnemonic == "fcvt.w.s" {
-                        i32::MAX as u32
-                    } else {
-                        u32::MAX
-                    };
-                    self.write_reg(rd, bits, changes);
+                    self.write_reg(
+                        rd,
+                        if unsigned { u32::MAX } else { i32::MAX as u32 },
+                        changes,
+                    );
                 } else {
-                    let rounded = mode.round(value);
+                    let rounded = mode.round64(value);
                     if rounded != value {
                         self.set_flag(FLAG_NX);
                     }
-                    let bits = if insn.mnemonic == "fcvt.w.s" {
-                        if rounded >= 2147483648.0 {
+                    let bits = if unsigned {
+                        if rounded <= 0.0 {
+                            if rounded < 0.0 {
+                                self.set_flag(FLAG_NV);
+                            }
+                            0
+                        } else if rounded >= 4294967296.0 {
                             self.set_flag(FLAG_NV);
-                            i32::MAX as u32
-                        } else if rounded < -2147483648.0 {
-                            self.set_flag(FLAG_NV);
-                            i32::MIN as u32
+                            u32::MAX
                         } else {
-                            rounded as i32 as u32
+                            rounded as u32
                         }
-                    } else if rounded <= 0.0 {
-                        if rounded < 0.0 {
-                            self.set_flag(FLAG_NV);
-                        }
-                        0
-                    } else if rounded >= 4294967296.0 {
+                    } else if rounded >= 2147483648.0 {
                         self.set_flag(FLAG_NV);
-                        u32::MAX
+                        i32::MAX as u32
+                    } else if rounded < -2147483648.0 {
+                        self.set_flag(FLAG_NV);
+                        i32::MIN as u32
                     } else {
-                        rounded as u32
+                        rounded as i32 as u32
                     };
                     self.write_reg(rd, bits, changes);
                 }
             }
-            "fcvt.s.w" | "fcvt.s.wu" => {
-                let (exact, value) = if insn.mnemonic == "fcvt.s.w" {
-                    let integer = a as i32;
-                    (i64::from(integer), integer as f32)
+            "fcvt.s.w" | "fcvt.s.wu" | "fcvt.d.w" | "fcvt.d.wu" => {
+                let double = insn.mnemonic.ends_with(".d");
+                let unsigned = insn.mnemonic.contains("wu");
+                let (exact, value) = if unsigned {
+                    (i64::from(a), f64::from(a))
                 } else {
-                    (i64::from(a), a as f32)
+                    (i64::from(a as i32), f64::from(a as i32))
                 };
-                // The host rounds to nearest; report an inexact conversion.
                 if value as i64 != exact {
                     self.set_flag(FLAG_NX);
                 }
-                self.write_freg(rd, value.to_bits(), changes);
+                if double {
+                    self.write_d(rd, value, changes);
+                } else {
+                    let narrowed = value as f32;
+                    if f64::from(narrowed) != value {
+                        self.set_flag(FLAG_NX);
+                    }
+                    self.write_s(rd, narrowed, changes);
+                }
+            }
+            "fcvt.s.d" => {
+                let value = self.read_d(rs1);
+                if value.is_nan() {
+                    self.set_flag(FLAG_NV);
+                }
+                let narrowed = value as f32;
+                if f64::from(narrowed) != value {
+                    self.set_flag(FLAG_NX);
+                }
+                self.write_s(rd, narrowed, changes);
+            }
+            "fcvt.d.s" => {
+                let value = self.read_s(rs1);
+                self.write_d(rd, f64::from(value), changes);
             }
             "fmv.w.x" => {
-                let bits = a;
-                self.write_freg(rd, bits, changes);
+                // The move boxes: the upper 32 bits become all ones.
+                self.write_s(rd, f32::from_bits(a), changes);
             }
             "fmv.x.w" => {
-                let bits = self.fregs[rs1];
+                // The low 32 bits, boxed or not: this is a bit-level move.
+                let bits = self.fregs[rs1] as u32;
                 self.write_reg(rd, bits, changes);
             }
 
@@ -1582,6 +1749,17 @@ mod float_tests {
         assert_eq!(machine.reg(12), 0);
         assert_eq!(machine.reg(13), 1 << 6, "positive normal");
         assert_eq!(machine.reg(14), 1 << 1, "negative normal");
+    }
+
+    #[test]
+    fn a_single_is_nan_boxed_and_an_unboxed_read_is_canonical_nan() {
+        // `flw` boxes; a raw 64-bit write leaves the upper half zero, which the
+        // single-precision read must treat as "no value" rather than as 0.0.
+        let machine = run(
+            "_start:\n    li t0, 0x100\n    li t1, 0x3fc00000\n    sw t1, 0(t0)\n    flw f0, 0(t0)\n    fmv.x.w a0, f0\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 0x3fc0_0000);
+        assert_eq!(machine.freg(0) >> 32, 0xffff_ffff, "boxed");
     }
 
     #[test]

@@ -581,9 +581,9 @@ fn encode_insn(
             }
         }
         Format::R4 => {
-            // The format field is zero for single precision; the fourth source
-            // sits at the top of the word.
-            word |= rs2 << 20 | rs3 << 27;
+            // `fmt` (26:25) is zero for single precision and one for double; the
+            // fourth source sits at the top of the word.
+            word |= rs2 << 20 | rs3 << 27 | u32::from(insn.fmt.unwrap_or(0)) << 25;
         }
         Format::I => {
             let field = if let Some(funct7) = insn.funct7 {
