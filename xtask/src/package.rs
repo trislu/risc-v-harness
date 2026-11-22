@@ -121,7 +121,10 @@ fn package(root: &Path, options: &Options) -> Result<(), String> {
     make_executable(&staged).map_err(|error| format!("chmod {}: {error}", staged.display()))?;
 
     if !options.skip_build {
-        run_in(&extension, "pnpm", &["run", "build"])?;
+        // Windows resolves `pnpm` to `pnpm.cmd` through PATHEXT; `CreateProcess`
+        // does not, so the name has to carry the extension there.
+        let pnpm = if cfg!(windows) { "pnpm.cmd" } else { "pnpm" };
+        run_in(&extension, pnpm, &["run", "build"])?;
     }
     if !extension.join("out").join("extension.js").exists() {
         return Err(
