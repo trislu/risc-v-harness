@@ -266,10 +266,15 @@ impl Session {
                         ("old", number(*old as f64)),
                         ("new", number(machine.reg(usize::from(*index)) as f64)),
                     ]),
+                    // A floating-point register is 64 bits, which a JSON number
+                    // cannot carry exactly, so the values are hex strings.
                     Change::FReg { index, old } => object(vec![
                         ("freg", number(*index as f64)),
-                        ("old", number(*old as f64)),
-                        ("new", number(machine.freg(usize::from(*index)) as f64)),
+                        ("old", string(format!("0x{old:016x}"))),
+                        (
+                            "new",
+                            string(format!("0x{:016x}", machine.freg(usize::from(*index)))),
+                        ),
                     ]),
                     Change::Mem { addr, old } => object(vec![
                         ("addr", number(*addr as f64)),
@@ -407,7 +412,11 @@ mod tests {
     use super::*;
 
     fn session(source: &str) -> Session {
-        let mut session = Session::new(Target::parse("rv32i_zicsr").expect("target"));
+        session_with_target("rv32i_zicsr", source)
+    }
+
+    fn session_with_target(target: &str, source: &str) -> Session {
+        let mut session = Session::new(Target::parse(target).expect("target"));
         session.set_source(source);
         session
     }
@@ -447,6 +456,22 @@ mod tests {
         assert!(json.contains("\"changed\":[{\"reg\":10,"));
         session.run(10);
         assert!(session.state_json().contains("\"halt\":\"ebreak\""));
+    }
+
+    #[test]
+    fn a_float_change_is_a_hex_string() {
+        // 64 bits do not fit a JSON number, so the value travels as text.
+        let mut session = session_with_target(
+            "rv32if",
+            "li t0, 0x2000\ncsrw mstatus, t0\nli t0, 0x3fc00000\nfmv.w.x f0, t0\n",
+        );
+        session.step(4);
+        let json = session.state_json();
+        assert!(
+            json.contains("\"freg\":0,\"old\":\"0x0000000000000000\","),
+            "{json}"
+        );
+        assert!(json.contains("\"new\":\"0xffffffff3fc00000\""), "{json}");
     }
 
     #[test]
