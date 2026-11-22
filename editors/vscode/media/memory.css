@@ -1,0 +1,80 @@
+body {
+  font-family: var(--vscode-editor-font-family);
+  font-size: 12px;
+  padding: 0;
+  margin: 0;
+  color: var(--vscode-foreground);
+}
+
+.bar {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+input {
+  width: 92px;
+  background: var(--vscode-input-background);
+  color: var(--vscode-input-foreground);
+  border: 1px solid var(--vscode-input-border, transparent);
+  padding: 2px 4px;
+  font-family: inherit;
+}
+
+button {
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: none;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+
+button.on {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+
+.hint {
+  color: var(--vscode-descriptionForeground);
+  padding: 2px 6px;
+  font-size: 11px;
+}
+
+.grid {
+  padding: 4px 6px;
+  white-space: pre;
+  line-height: 1.45;
+}
+
+.mark {
+  display: inline-block;
+  width: 2ch;
+  color: var(--vscode-charts-blue);
+}
+
+.addr {
+  color: var(--vscode-descriptionForeground);
+}
+
+.byte {
+  display: inline-block;
+  width: 2.1ch;
+  text-align: right;
+}
+
+.byte.changed {
+  background: var(--vscode-editor-findMatchHighlightBackground);
+}
+
+.ascii {
+  color: var(--vscode-descriptionForeground);
+  margin-left: 8px;
+}
+
+.status {
+  color: var(--vscode-descriptionForeground);
+  padding: 2px 6px;
+  border-top: 1px solid var(--vscode-panel-border);
+}

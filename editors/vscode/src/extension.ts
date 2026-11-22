@@ -106,7 +106,7 @@ export function activate(context: ExtensionContext): void {
   });
 
   // The memory view lives in the debug sidebar and follows the machine.
-  const memory = new MemoryView();
+  const memory = new MemoryView(context.extensionUri);
   context.subscriptions.push(
     window.registerWebviewViewProvider(MemoryView.viewType, memory, {
       webviewOptions: { retainContextWhenHidden: true },
