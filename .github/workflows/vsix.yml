@@ -68,7 +68,7 @@ jobs:
           case "${{ matrix.target }}" in
             win32-*) binary="$binary.exe" ;;
           esac
-          node xtask/package-vsix.mjs "${{ matrix.target }}" --binary "$binary"
+          cargo xtask package-vsix "${{ matrix.target }}" --binary "$binary"
 
       - uses: actions/upload-artifact@v4
         with:

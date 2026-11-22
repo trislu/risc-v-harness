@@ -1,8 +1,8 @@
 // Captures the README demo chapter from a running Extension Development Host.
 //
-//   node xtask/capture-vscode.mjs
+//   node scripts/capture-vscode.mjs
 //   for story in definition completion target debug; do
-//     python3 xtask/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
+//     python3 scripts/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
 //   done
 //
 // Every story that is a *sequence* becomes a GIF; hover is a state, so it stays a

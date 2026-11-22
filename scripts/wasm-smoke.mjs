@@ -4,7 +4,7 @@
 // This is the check the browser host will do, minus the DOM. Run it after
 // `cargo build -p rvh-wasm --target wasm32-unknown-unknown --release`.
 //
-//   node xtask/wasm-smoke.mjs [path-to-wasm]
+//   node scripts/wasm-smoke.mjs [path-to-wasm]
 
 import { readFileSync } from 'node:fs';
 

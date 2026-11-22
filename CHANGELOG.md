@@ -105,7 +105,7 @@ adapter and a browser playground, all over one assembler and one simulator.
 
 #### Trace comparison
 
-- `xtask/verify-trace.sh` runs one ELF under `rvh` and spike and compares the
+- `scripts/verify-trace.sh` runs one ELF under `rvh` and spike and compares the
   result step by step: address, word, and every write. Six fixtures (integer,
   multiply/divide, compressed, atomics, single and double precision) agree. It is opt-in:
   set `RVH_SPIKE`, and it skips when spike is absent.

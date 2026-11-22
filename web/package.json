@@ -7,7 +7,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
-    "smoke": "tsc -p tsconfig.smoke.json && node ../xtask/engine-smoke.mjs",
+    "smoke": "tsc -p tsconfig.smoke.json && node ../scripts/engine-smoke.mjs",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

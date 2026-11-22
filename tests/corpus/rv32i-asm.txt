@@ -1,6 +1,6 @@
 # One case per line: <mnemonic>|<assembly>
 #
-# `xtask/verify-asm.sh` assembles each line with GNU as, then decodes the
+# `scripts/verify-asm.sh` assembles each line with GNU as, then decodes the
 # resulting word with `rvh isa decode` and checks that the mnemonic matches.
 # Lines starting with '#' and blank lines are ignored.
 

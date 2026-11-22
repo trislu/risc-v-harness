@@ -81,7 +81,7 @@ test('a diagnostic fix rewrites the source', async ({ page }) => {
 });
 
 // Recording the README demo: `RVH_RECORD=1 pnpm --dir web run test:e2e -- -g record`.
-// It writes frames, not a GIF; `xtask/assemble-gif.py` turns them into one.
+// It writes frames, not a GIF; `scripts/assemble-gif.py` turns them into one.
 test('record the README demo frames', async ({ page }) => {
   test.skip(process.env.RVH_RECORD !== '1', 'set RVH_RECORD=1 to write frames');
 

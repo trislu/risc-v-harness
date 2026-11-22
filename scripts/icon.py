@@ -5,7 +5,7 @@ The mark is drawn rather than exported from a design tool so the colours and
 proportions stay editable here. Supersampled 4x and downsampled, because PIL
 draws without antialiasing.
 
-Run: python3 xtask/icon.py
+Run: python3 scripts/icon.py
 """
 
 from pathlib import Path

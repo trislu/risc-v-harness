@@ -62,7 +62,7 @@ Pre-release, `0.x`. What works today:
 - 141 instructions: RV32I, Zicsr, M, A, C, F and D; a file declares its own target
   with `.attribute arch` or `.option arch`
 - `.insn` for raw words, board presets, and a trace that agrees with spike step by
-  step (`xtask/verify-trace.sh`)
+  step (`scripts/verify-trace.sh`)
 - assembler, simulator with undo and trace, ELF reading and writing
 - language server: pull diagnostics with fixes, hover, completion, definition,
   semantic tokens; debug adapter with breakpoints and a memory view

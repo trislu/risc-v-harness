@@ -8,7 +8,7 @@ recorded in [ADR-0007](docs/adr/0007-repo-shape.md).
 | --- | --- | --- | --- |
 | [Easy RISC-V](https://easyriscv.dram.page/) ([source](https://github.com/dramforever/easyriscv)) | the teaching sequence behind `tests/corpus/` and parts of the lesson text | CC0-1.0 | lesson text, credited |
 | [The RISC-V Instruction Set Manual](https://riscv.org/technical/specifications/) | instruction encodings, operand widths, ISA semantics | CC-BY-4.0 for the prose; encodings are facts | `isa/*.toml`, hand-written |
-| [GNU binutils](https://www.gnu.org/software/binutils/) (`as`, `ld`, `objcopy`, `readelf`) | differential oracle in `xtask/verify-*.sh` and the ELF fixture script | GPL-3.0-or-later | not shipped; invoked as a separate program |
+| [GNU binutils](https://www.gnu.org/software/binutils/) (`as`, `ld`, `objcopy`, `readelf`) | differential oracle in `scripts/verify-*.sh` and the ELF fixture script | GPL-3.0-or-later | not shipped; invoked as a separate program |
 | npm packages (`svelte`, `vite`, `codemirror`, `playwright`, `vscode-languageclient`) | web playground and editor client | each package's own license | bundled into `web/` and the VSIX |
 
 The `isa/` data is transcribed from the manual rather than copied from

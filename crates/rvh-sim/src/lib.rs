@@ -579,7 +579,7 @@ impl Machine {
 
     /// One step as a single line: `<pc> <word> [<write>...]`.
     ///
-    /// The format is an interface: `xtask/verify-trace.sh` compares it with
+    /// The format is an interface: `scripts/verify-trace.sh` compares it with
     /// spike's commit log, so changing it means changing that script too.
     #[must_use]
     pub fn describe_step(&self, step: &Step) -> String {

@@ -29,7 +29,7 @@ The reasons, in order of weight:
    workload where an async runtime earns its place.
 2. **A testable core.** `Server::handle(body) -> Vec<String>` takes a message and
    returns the messages to send. Tests drive it without a runtime, a client or a
-   pipe; the wire is covered separately by `xtask/lsp-smoke.sh`.
+   pipe; the wire is covered separately by `cargo xtask lsp-smoke`.
 3. **No dependency tree.** A framework brings tokio, tower, serde and
    `lsp-types`; this layer brings none.
 

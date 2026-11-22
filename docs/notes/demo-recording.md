@@ -47,7 +47,7 @@ Reproduce with:
 
 ```bash
 RVH_RECORD=1 pnpm --dir web run test:e2e -- -g "record the README demo"
-python3 xtask/assemble-gif.py assets/frames/playground assets/playground.gif --fps 1
+python3 scripts/assemble-gif.py assets/frames/playground assets/playground.gif --fps 1
 ```
 
 The test is skipped unless `RVH_RECORD=1`, so a normal `test:e2e` run does not
@@ -74,12 +74,12 @@ DISPLAY=:126 RVH_LSP_SERVER=target/debug/rvh \
        --extensionDevelopmentPath=editors/vscode \
        --remote-debugging-port=9353 scratch/vscode-demo/ws &
 # another: drive it and capture
-node xtask/record-vscode.mjs      # the GIF story, into assets/frames/vscode-fix
-python3 xtask/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif --fps 1
+node scripts/record-vscode.mjs      # the GIF story, into assets/frames/vscode-fix
+python3 scripts/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif --fps 1
 
-node xtask/capture-vscode.mjs     # per-feature frames, into assets/frames/<story>/
+node scripts/capture-vscode.mjs     # per-feature frames, into assets/frames/<story>/
 for story in definition completion target debug; do
-  python3 xtask/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
+  python3 scripts/assemble-gif.py assets/frames/$story assets/demos/$story.gif --fps 1
 done
 ```
 
@@ -112,7 +112,7 @@ one directory, and let the assembler build the GIF.
 
 ```bash
 # 01.png, 02.png, ... in name order
-python3 xtask/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif --fps 2
+python3 scripts/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif --fps 2
 ```
 
 The assembler uses one adaptive palette for the whole set, so colours stay stable

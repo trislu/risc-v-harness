@@ -212,7 +212,7 @@ stages one first:
 
 ```bash
 cargo build -p rvh-cli --release
-node xtask/package-vsix.mjs linux-x64 --binary target/release/rvh
+cargo xtask package-vsix linux-x64 --binary target/release/rvh
 ```
 
 `pnpm --dir editors/vscode run package` does the same for the host, using whatever

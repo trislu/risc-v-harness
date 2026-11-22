@@ -2,7 +2,7 @@
 //
 //   1. start the host with --remote-debugging-port and the workspace open
 //   2. node record-vscode.mjs
-//   3. python3 ../xtask/assemble-gif.py ../assets/frames/vscode-fix ../assets/vscode-fix.gif
+//   3. python3 ../scripts/assemble-gif.py ../assets/frames/vscode-fix ../assets/vscode-fix.gif
 //
 // The story: paste `005_trap_csr.s`, append a `mul` its target lacks, take the
 // quick fix, then open the target picker. The buffer is rewritten from the file

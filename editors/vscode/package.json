@@ -153,7 +153,7 @@
     "build": "tsc -p . --noEmit && esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap",
     "check": "tsc -p . --noEmit",
     "watch": "esbuild src/extension.ts --bundle --external:vscode --format=cjs --platform=node --target=node20 --outfile=out/extension.js --sourcemap --watch",
-    "package": "node ../../xtask/package-vsix.mjs"
+    "package": "cargo run --quiet --manifest-path ../../Cargo.toml -p xtask -- package-vsix"
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

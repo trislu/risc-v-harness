@@ -48,7 +48,7 @@ window reload is needed.
   files.
 - **Snapshots live in `expected/<stem>.snap`** and are regenerated with
   `RVH_BLESS=1 cargo test -p rvh-syntax`.
-- `rv32i-asm.txt` is the operand matrix used by `xtask/verify-asm.sh`; it is not a
+- `rv32i-asm.txt` is the operand matrix used by `scripts/verify-asm.sh`; it is not a
   numbered example.
 - A file may declare its own target (006, 007). It still has to assemble under
   `-march=rv32i_zicsr` plus those declarations, because that is how the

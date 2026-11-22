@@ -2,7 +2,7 @@
 """Assemble PNG frames into a GIF for assets/.
 
 Usage:
-    python3 xtask/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif [--fps 4] [--width 960]
+    python3 scripts/assemble-gif.py assets/frames/vscode-fix assets/vscode-fix.gif [--fps 4] [--width 960]
 
 Frames are sorted by file name, so `01-typing.png`, `02-squiggle.png`, ...
 gives the intended order. Requires Pillow, which is only needed for producing

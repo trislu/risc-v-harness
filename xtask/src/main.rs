@@ -1,8 +1,10 @@
-//! Repository chores: ISA codegen and artifact cleanup.
+//! Repository chores: ISA codegen, packaging and artifact cleanup.
 
 mod clean;
 mod content;
 mod emit;
+mod lsp_smoke;
+mod package;
 mod schema;
 
 use std::collections::BTreeMap;
@@ -15,6 +17,9 @@ commands:
   codegen [--check]   regenerate crates/rvh-isa/src/generated.rs
   clean [--all] [--dry-run]
                       remove build outputs; --all also node_modules and scratch
+  lsp-smoke           drive `rvh lsp` over stdio and check the replies
+  package-vsix [target] [--binary <path>] [--skip-build]
+                      package a per-platform VSIX under target/vsix
 ";
 
 fn main() -> ExitCode {
@@ -33,6 +38,8 @@ fn main() -> ExitCode {
         ["clean", "--all", "--dry-run"] | ["clean", "--dry-run", "--all"] => {
             clean_artifacts(true, true)
         }
+        ["lsp-smoke"] => lsp_smoke::run(&repo_root()),
+        ["package-vsix", rest @ ..] => package::run(&repo_root(), rest),
         [] | ["help"] | ["--help"] => {
             print!("{USAGE}");
             ExitCode::SUCCESS

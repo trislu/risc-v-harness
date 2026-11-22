@@ -53,7 +53,7 @@ state after the same edit.
 | debug something other than the built-in simulator | behind DAP; see [ADR-0017](adr/0017-dap-is-the-backend-boundary.md) |
 | change editor behaviour | `editors/vscode/src` |
 | change the playground | `web/src`, `crates/rvh-wasm` for new ABI entry points |
-| change the ELF layout | `crates/rvh-elf`, then `xtask/verify-elf.sh` |
+| change the ELF layout | `crates/rvh-elf`, then `scripts/verify-elf.sh` |
 
 ## 0.2 The same edit, three ways
 
@@ -315,7 +315,7 @@ Rules that the implementation depends on:
   to pass a `BigInt`.
 
 The TypeScript wrapper lives in `web/src/engine.ts` and is covered by
-`xtask/engine-smoke.mjs`, which drives it against the real artifact.
+`scripts/engine-smoke.mjs`, which drives it against the real artifact.
 
 The same functions are callable natively; that is how the Rust tests exercise
 them.
@@ -354,13 +354,13 @@ Every gate in this table runs today; the commands are in
 | gate | command | covers |
 | --- | --- | --- |
 | unit tests | `cargo test --workspace` | 221 tests across fourteen crates |
-| encoder differential | `./xtask/verify-asm.sh` | 65 checks: the operand matrix, M, A and the corpus programs, byte-identical to GNU `as` + `ld` |
+| encoder differential | `./scripts/verify-asm.sh` | 65 checks: the operand matrix, M, A and the corpus programs, byte-identical to GNU `as` + `ld` |
 | CST snapshots | `cargo test -p rvh-syntax` | 12 corpus files, diagnostics and fixes included |
-| wasm ABI | `node xtask/wasm-smoke.mjs` | the real 258 KiB module driven from JavaScript |
+| wasm ABI | `node scripts/wasm-smoke.mjs` | the real 258 KiB module driven from JavaScript |
 | TS wrapper | `pnpm --dir web run smoke` | `engine.ts` against the real artifact |
 | type check | `pnpm --dir web run check` | Svelte templates and scripts |
 | browser | `pnpm --dir web run test:e2e` | Playwright, 6 cases over the built page |
-| LSP wire | `./xtask/lsp-smoke.sh` | `rvh lsp` over stdio with framed messages |
+| LSP wire | `cargo xtask lsp-smoke` | `rvh lsp` over stdio with framed messages |
 | prose | `markdownlint-cli2 '**/*.md'` | zero warnings |
 
 Not run yet, and why:

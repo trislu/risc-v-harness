@@ -38,13 +38,13 @@ total size. `--all` needs a `pnpm install` afterwards.
 
 ### Trace comparison
 
-`xtask/verify-trace.sh` runs the same ELF under `rvh` and under
+`scripts/verify-trace.sh` runs the same ELF under `rvh` and under
 [spike](https://github.com/riscv-software-src/riscv-isa-sim) and compares the
 result instruction by instruction: address, word, and every write. It needs a
 spike binary; point `RVH_SPIKE` at one, or have `spike` in `PATH`:
 
 ```bash
-RVH_SPIKE=~/.local/spike/bin/spike ./xtask/verify-trace.sh
+RVH_SPIKE=~/.local/spike/bin/spike ./scripts/verify-trace.sh
 ```
 
 Six fixtures cover integer arithmetic, multiply and divide, compressed, atomics,
@@ -74,11 +74,11 @@ RVH_BLESS=1 cargo test -p rvh-syntax
 The assembler is compared with the real toolchain rather than with itself:
 
 ```bash
-./xtask/verify-asm.sh    # checks encodings; needs binutils for RISC-V
-./xtask/verify-trace.sh  # compares step traces with spike; needs spike
-./xtask/verify-elf.sh    # ELF fixtures from GNU as/ld, plus a round trip
-./xtask/lsp-smoke.sh     # drive `rvh lsp` over stdio
-node xtask/wasm-smoke.mjs
+./scripts/verify-asm.sh    # checks encodings; needs binutils for RISC-V
+./scripts/verify-trace.sh  # compares step traces with spike; needs spike
+./scripts/verify-elf.sh    # ELF fixtures from GNU as/ld, plus a round trip
+cargo xtask lsp-smoke      # drive `rvh lsp` over stdio
+node scripts/wasm-smoke.mjs
 ```
 
 `verify-asm.sh` assembles every corpus file with both toolchains and compares the
@@ -110,7 +110,8 @@ crates/rvh-sim      machine state, step, undo, trace
 crates/rvh-session  document facade: parse, assemble, run, JSON snapshots
 crates/rvh-wasm     C ABI over the session (wasm and native)
 crates/rvh-cli      the `rvh` binary
-xtask               codegen, repo chores, differential checks
+xtask               codegen, packaging, repo chores
+scripts             checks that drive external tools (binutils, spike, node)
 isa/                hand-written instruction tables
 content/overlay/    one-line descriptions per locale
 tests/corpus/       assembly files, error cases, and committed snapshots
@@ -133,8 +134,8 @@ GitHub Actions**. After that the demo lives at
 ## Assets
 
 Screenshots and GIFs live in `assets/`. Frames are assembled with
-`python3 xtask/assemble-gif.py <frames-dir> <out.gif>`. The VS Code story is
-captured by `xtask/record-vscode.mjs` over the DevTools protocol; the playground
+`python3 scripts/assemble-gif.py <frames-dir> <out.gif>`. The VS Code story is
+captured by `scripts/record-vscode.mjs` over the DevTools protocol; the playground
 story by `RVH_RECORD=1 pnpm --dir web run test:e2e`. The storyboards, the profile
 settings and the reasons behind them are in
 [docs/notes/demo-recording.md](notes/demo-recording.md).

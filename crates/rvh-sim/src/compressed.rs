@@ -167,7 +167,7 @@ pub fn decode(halfword: u16) -> Option<Decoded> {
 mod tests {
     use super::*;
 
-    /// Every word from the fixture in `xtask/verify-asm.sh`, with the operands
+    /// Every word from the fixture in `scripts/verify-asm.sh`, with the operands
     /// GNU's disassembler printed.
     #[test]
     fn the_gnu_words_decode() {
