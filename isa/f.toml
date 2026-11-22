@@ -86,3 +86,152 @@ funct3 = 0b000
 funct7 = 0b1110000
 class = "move"
 operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fsgnj-s"
+mnemonic = "fsgnj.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b0010000
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsgnjn-s"
+mnemonic = "fsgnjn.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b0010000
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fsgnjx-s"
+mnemonic = "fsgnjx.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b010
+funct7 = 0b0010000
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "feq-s"
+mnemonic = "feq.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b010
+funct7 = 0b1010000
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "flt-s"
+mnemonic = "flt.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b1010000
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fle-s"
+mnemonic = "fle.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b1010000
+class = "compare"
+operands = ["rd:gpr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmin-s"
+mnemonic = "fmin.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b000
+funct7 = 0b0010100
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fmax-s"
+mnemonic = "fmax.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b0010100
+class = "alu-reg"
+operands = ["frd:fr", "frs1:fr", "frs2:fr"]
+
+[[insn]]
+id = "fclass-s"
+mnemonic = "fclass.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b001
+funct7 = 0b1110000
+class = "compare"
+operands = ["rd:gpr", "frs1:fr"]
+
+# Conversions: the `rs2` field selects signed or unsigned, and `funct3` carries
+# the rounding mode. `imm12` holds the whole 12-bit field so the table can fix it.
+[[insn]]
+id = "fcvt-w-s"
+mnemonic = "fcvt.w.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1100000
+funct5 = 0b00000
+class = "convert"
+operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-wu-s"
+mnemonic = "fcvt.wu.s"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1100000
+funct5 = 0b00001
+class = "convert"
+operands = ["rd:gpr", "frs1:fr"]
+
+[[insn]]
+id = "fcvt-s-w"
+mnemonic = "fcvt.s.w"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1101000
+funct5 = 0b00000
+class = "convert"
+operands = ["frd:fr", "rs1:gpr"]
+
+[[insn]]
+id = "fcvt-s-wu"
+mnemonic = "fcvt.s.wu"
+ext = "f"
+format = "R"
+opcode = 0b1010011
+funct3 = 0b111
+funct7 = 0b1101000
+funct5 = 0b00001
+class = "convert"
+operands = ["frd:fr", "rs1:gpr"]

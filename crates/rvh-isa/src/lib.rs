@@ -281,6 +281,8 @@ pub struct Insn {
     pub opcode: u8,
     pub funct3: Option<u8>,
     pub funct7: Option<u8>,
+    /// `funct5`: the `rs2` field used as a constant, as the conversions do.
+    pub funct5: Option<u8>,
     /// `funct6` of a compressed format (bits 15:10).
     pub funct6: Option<u8>,
     /// `funct4` of a compressed format (bits 15:12).
@@ -308,6 +310,10 @@ impl Insn {
         if let Some(funct7) = self.funct7 {
             bits |= u32::from(funct7) << 25;
             mask |= 0x7f << 25;
+        }
+        if let Some(funct5) = self.funct5 {
+            bits |= u32::from(funct5) << 20;
+            mask |= 0x1f << 20;
         }
         if let Some(funct6) = self.funct6 {
             bits |= u32::from(funct6) << 10;
@@ -402,8 +408,8 @@ mod tests {
     fn table_is_complete() {
         assert_eq!(
             all().len(),
-            99,
-            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 8 RV32F instructions"
+            112,
+            "40 RV32I, 6 Zicsr, 8 M, 11 A, 26 RV32C and 21 RV32F instructions"
         );
         assert_eq!(extensions(), vec!["a", "c", "f", "i", "m", "zicsr"]);
     }

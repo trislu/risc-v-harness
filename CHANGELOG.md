@@ -77,12 +77,15 @@ adapter and a browser playground, all over one assembler and one simulator.
 #### RV32F, first slice
 
 - `flw`, `fsw`, `fadd.s`, `fsub.s`, `fmul.s`, `fdiv.s`, `fmv.w.x` and `fmv.x.w`,
-  byte-identical to `as -march=rv32if`. The machine gained 32 floating-point
-  registers held as bit patterns, and the change log records their writes so undo
-  reaches them.
-- Not yet: comparisons, conversions, `fsgnj`, `fmin`/`fmax`, fused multiply-add,
-  `fcsr` (rounding mode and flags), and the D extension. The encodings use the
-  dynamic-rounding field, which the simulator treats as round-to-nearest-even.
+  then `fsgnj`/`fsgnjn`/`fsgnjx`, `fmin`/`fmax`, `feq`/`flt`/`fle`, `fclass` and
+  the four conversions: 21 instructions, byte-identical to `as -march=rv32if`.
+  The machine gained 32 floating-point registers held as bit patterns, and the
+  change log records their writes so undo reaches them.
+- Conversions round to nearest, ties to even, and saturate at the integer bounds;
+  `fclass` reports the ten categories; a NaN operand loses `fmin`/`fmax`.
+- Not yet: the fused multiply-add family (`R4`), `fcsr` (rounding mode and flags),
+  and the D extension. The encodings use the dynamic-rounding field, which the
+  simulator treats as round-to-nearest-even.
 
 #### Raw encodings
 

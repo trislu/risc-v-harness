@@ -765,6 +765,120 @@ impl Machine {
                 };
                 self.write_freg(rd, value.to_bits(), changes);
             }
+            "fsgnj.s" | "fsgnjn.s" | "fsgnjx.s" => {
+                let left = self.fregs[rs1];
+                let right = self.fregs[rs2];
+                let sign = match insn.mnemonic {
+                    "fsgnj.s" => right & 0x8000_0000,
+                    "fsgnjn.s" => !right & 0x8000_0000,
+                    _ => (left ^ right) & 0x8000_0000,
+                };
+                self.write_freg(rd, (left & 0x7fff_ffff) | sign, changes);
+            }
+            "feq.s" | "flt.s" | "fle.s" => {
+                let left = f32::from_bits(self.fregs[rs1]);
+                let right = f32::from_bits(self.fregs[rs2]);
+                let value = match insn.mnemonic {
+                    "feq.s" => left == right,
+                    "flt.s" => left < right,
+                    _ => left <= right,
+                };
+                self.write_reg(rd, u32::from(value), changes);
+            }
+            "fmin.s" | "fmax.s" => {
+                let left = f32::from_bits(self.fregs[rs1]);
+                let right = f32::from_bits(self.fregs[rs2]);
+                // A NaN operand loses; two NaNs produce the canonical quiet NaN.
+                let value = match (left.is_nan(), right.is_nan()) {
+                    (true, true) => f32::NAN,
+                    (true, false) => right,
+                    (false, true) => left,
+                    (false, false) => {
+                        if insn.mnemonic == "fmin.s" {
+                            if left < right {
+                                left
+                            } else {
+                                right
+                            }
+                        } else if left > right {
+                            left
+                        } else {
+                            right
+                        }
+                    }
+                };
+                self.write_freg(rd, value.to_bits(), changes);
+            }
+            "fclass.s" => {
+                let value = f32::from_bits(self.fregs[rs1]);
+                let bits = value.to_bits();
+                let negative = bits >> 31 == 1;
+                let exponent = (bits >> 23) & 0xff;
+                let mantissa = bits & 0x7f_ffff;
+                let class: u32 = if value.is_nan() {
+                    if mantissa & 0x40_0000 != 0 {
+                        1 << 9
+                    } else {
+                        1 << 8
+                    }
+                } else if value.is_infinite() {
+                    if negative {
+                        1
+                    } else {
+                        1 << 7
+                    }
+                } else if value == 0.0 {
+                    if negative {
+                        1 << 3
+                    } else {
+                        1 << 4
+                    }
+                } else if exponent == 0 {
+                    if negative {
+                        1 << 2
+                    } else {
+                        1 << 5
+                    }
+                } else if negative {
+                    1 << 1
+                } else {
+                    1 << 6
+                };
+                self.write_reg(rd, class, changes);
+            }
+            "fcvt.w.s" | "fcvt.wu.s" => {
+                let value = f32::from_bits(self.fregs[rs1]);
+                // Round to nearest, ties to even; NaN and out-of-range saturate.
+                let rounded = if value.is_nan() {
+                    u32::MAX as f32
+                } else {
+                    value.round_ties_even()
+                };
+                let bits = if insn.mnemonic == "fcvt.w.s" {
+                    if rounded >= 2147483648.0 {
+                        i32::MAX as u32
+                    } else if rounded < -2147483648.0 {
+                        i32::MIN as u32
+                    } else {
+                        rounded as i32 as u32
+                    }
+                } else if rounded <= 0.0 {
+                    0
+                } else if rounded >= 4294967296.0 {
+                    u32::MAX
+                } else {
+                    rounded as u32
+                };
+                self.write_reg(rd, bits, changes);
+            }
+            "fcvt.s.w" | "fcvt.s.wu" => {
+                let value = if insn.mnemonic == "fcvt.s.w" {
+                    a as i32 as f32
+                } else {
+                    a as f32
+                };
+                self.write_freg(rd, value.to_bits(), changes);
+            }
             "fmv.w.x" => {
                 let bits = a;
                 self.write_freg(rd, bits, changes);
@@ -1299,5 +1413,56 @@ mod board_tests {
     #[test]
     fn an_unknown_board_is_none() {
         assert!(board("no-such-board").is_none());
+    }
+}
+
+#[cfg(test)]
+mod float_tests {
+    use super::*;
+
+    fn run(source: &str) -> Machine {
+        let tree = rvh_syntax::parse(source);
+        let target = rvh_isa::Target::parse("rv32if").expect("target");
+        let program = rvh_sem::resolve(&tree, &target);
+        assert!(program.diagnostics.is_empty(), "{:?}", program.diagnostics);
+        let (image, diagnostics) = rvh_asm::assemble(&program);
+        assert!(diagnostics.is_empty(), "{diagnostics:?}");
+        let mut machine = Machine::new();
+        machine.load(&image);
+        machine.run(100);
+        machine
+    }
+
+    #[test]
+    fn conversions_round_to_nearest_even() {
+        // 2.5 -> 2, 3.5 -> 4, -2.5 -> -2, then back to floats.
+        let machine = run(
+            "_start:\n    li t0, 0x40200000\n    fmv.w.x f0, t0\n    fcvt.w.s a0, f0\n    li t1, 0x40600000\n    fmv.w.x f1, t1\n    fcvt.w.s a1, f1\n    li t2, -1073741824\n    fmv.w.x f2, t2\n    fcvt.w.s a2, f2\n    fcvt.s.w f3, a0\n    fmv.x.w a3, f3\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 2);
+        assert_eq!(machine.reg(11), 4);
+        assert_eq!(machine.reg(12) as i32, -2);
+        assert_eq!(machine.reg(13), 0x4000_0000);
+    }
+
+    #[test]
+    fn comparisons_and_class_reach_the_integer_registers() {
+        let machine = run(
+            "_start:\n    li t0, 0x40200000\n    fmv.w.x f0, t0\n    li t1, -1073741824\n    fmv.w.x f1, t1\n    feq.s a0, f0, f0\n    flt.s a1, f1, f0\n    fle.s a2, f0, f1\n    fclass.s a3, f0\n    fclass.s a4, f1\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 1);
+        assert_eq!(machine.reg(11), 1);
+        assert_eq!(machine.reg(12), 0);
+        assert_eq!(machine.reg(13), 1 << 6, "positive normal");
+        assert_eq!(machine.reg(14), 1 << 1, "negative normal");
+    }
+
+    #[test]
+    fn min_and_max_pass_the_non_nan_operand_through() {
+        let machine = run(
+            "_start:\n    li t0, 0x7fc00000\n    fmv.w.x f0, t0\n    li t1, 0x40200000\n    fmv.w.x f1, t1\n    fmin.s f2, f0, f1\n    fmax.s f3, f0, f1\n    fmv.x.w a0, f2\n    fmv.x.w a1, f3\n    ebreak\n",
+        );
+        assert_eq!(machine.reg(10), 0x4020_0000);
+        assert_eq!(machine.reg(11), 0x4020_0000);
     }
 }

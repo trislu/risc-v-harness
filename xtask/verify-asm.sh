@@ -231,6 +231,19 @@ _start:
     fmv.x.w a0, f2
     fmv.w.x f6, a0
     fsw f2, 8(t0)
+    fsgnj.s f7, f0, f1
+    fsgnjn.s f8, f0, f1
+    fsgnjx.s f9, f0, f1
+    feq.s a1, f0, f1
+    flt.s a2, f0, f1
+    fle.s a3, f0, f1
+    fmin.s f10, f0, f1
+    fmax.s f11, f0, f1
+    fclass.s a4, f0
+    fcvt.w.s a5, f0
+    fcvt.wu.s a6, f0
+    fcvt.s.w f12, a5
+    fcvt.s.wu f13, a5
     ebreak
 EOF
 riscv64-linux-gnu-as -march=rv32if -mabi=ilp32f -o "$work/f.o" "$work/f.s"

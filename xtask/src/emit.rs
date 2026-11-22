@@ -32,6 +32,7 @@ fn render_insn(out: &mut String, insn: &Insn) {
     out.push_str(&format!("        opcode: 0b{:07b},\n", insn.opcode));
     out.push_str(&format!("        funct3: {},\n", opt_bits(insn.funct3, 3)));
     out.push_str(&format!("        funct7: {},\n", opt_bits(insn.funct7, 7)));
+    out.push_str(&format!("        funct5: {},\n", opt_bits(insn.funct5, 5)));
     out.push_str(&format!("        funct6: {},\n", opt_bits(insn.funct6, 6)));
     out.push_str(&format!("        funct4: {},\n", opt_bits(insn.funct4, 4)));
     out.push_str(&format!("        funct2: {},\n", opt_bits(insn.funct2, 2)));

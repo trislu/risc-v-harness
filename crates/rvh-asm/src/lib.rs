@@ -575,7 +575,10 @@ fn encode_insn(
 
     match insn.format {
         Format::R => {
-            word |= rs2 << 20;
+            match insn.funct5 {
+                Some(funct5) => word |= u32::from(funct5) << 20,
+                None => word |= rs2 << 20,
+            }
             if let Some(funct7) = insn.funct7 {
                 word |= u32::from(funct7) << 25;
             }

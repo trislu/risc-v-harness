@@ -9,8 +9,8 @@ use std::path::Path;
 
 /// Every key an `[[insn]]` record may carry.
 pub const FIELDS: &[&str] = &[
-    "id", "mnemonic", "ext", "format", "opcode", "funct3", "funct7", "funct6", "funct4", "funct2",
-    "imm12", "class", "operands",
+    "id", "mnemonic", "ext", "format", "opcode", "funct3", "funct7", "funct5", "funct6", "funct4",
+    "funct2", "imm12", "class", "operands",
 ];
 
 const FORMATS: &[&str] = &[
@@ -57,6 +57,7 @@ pub struct Insn {
     pub opcode: u32,
     pub funct3: Option<u32>,
     pub funct7: Option<u32>,
+    pub funct5: Option<u32>,
     pub funct6: Option<u32>,
     pub funct4: Option<u32>,
     pub funct2: Option<u32>,
@@ -76,6 +77,7 @@ struct Raw {
     opcode: Option<u32>,
     funct3: Option<u32>,
     funct7: Option<u32>,
+    funct5: Option<u32>,
     funct6: Option<u32>,
     funct4: Option<u32>,
     funct2: Option<u32>,
@@ -180,6 +182,7 @@ fn assign(file: &str, line: usize, rec: &mut Raw, key: &str, value: &str) -> Res
         "opcode" => set_int(file, line, &mut rec.opcode, key, value),
         "funct3" => set_int(file, line, &mut rec.funct3, key, value),
         "funct7" => set_int(file, line, &mut rec.funct7, key, value),
+        "funct5" => set_int(file, line, &mut rec.funct5, key, value),
         "funct6" => set_int(file, line, &mut rec.funct6, key, value),
         "funct4" => set_int(file, line, &mut rec.funct4, key, value),
         "funct2" => set_int(file, line, &mut rec.funct2, key, value),
@@ -488,6 +491,7 @@ fn finish(file: &str, raw: Raw) -> Result<Insn, Error> {
         opcode,
         funct3: raw.funct3,
         funct7: raw.funct7,
+        funct5: raw.funct5,
         funct6: raw.funct6,
         funct4: raw.funct4,
         funct2: raw.funct2,

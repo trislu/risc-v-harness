@@ -28,8 +28,10 @@ rvh dap                              # DAP on stdin/stdout
 vendor instruction whose encoding is known but whose semantics are not; the
 simulator runs it only when the word happens to decode as an instruction it knows.
 
-`--target rv32if` assembles and runs the first RV32F slice: `flw`, `fsw`,
-`fadd.s`, `fsub.s`, `fmul.s`, `fdiv.s`, `fmv.w.x` and `fmv.x.w`. The floating
+`--target rv32if` assembles and runs RV32F except the fused multiply-add family:
+loads and stores, the four arithmetic operations, `fsgnj`/`fsgnjn`/`fsgnjx`,
+`fmin`/`fmax`, the three comparisons, `fclass`, the four conversions, and both
+`fmv` moves. The floating
 registers hold 32-bit patterns, arithmetic goes through IEEE 754 single precision,
 and `fcsr` (rounding mode and flags) is not modelled yet: the encodings use the
 dynamic-rounding field, which the simulator treats as round-to-nearest-even.
